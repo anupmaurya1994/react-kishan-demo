@@ -72,20 +72,50 @@ export const login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "User not found with this email",
       });
     }
 
-    // 3️⃣ Compare password
+    // 3️⃣ Check if account is locked
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      const remainingTime = Math.ceil((user.lockUntil - Date.now()) / (60 * 1000));
+      return res.status(403).json({
+        success: false,
+        message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${remainingTime} minutes.`,
+      });
+    }
+
+    // 4️⃣ Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      // Increment login attempts if incorrect password
+      user.loginAttempts += 1;
+
+      let message = "Incorrect password.";
+
+      // Lock account if MAX_ATTEMPTS reached
+      if (user.loginAttempts >= 3) {
+        user.lockUntil = Date.now() + 30 * 60 * 1000; // Lock for 30 minutes
+        message = "Account locked for 30 minutes due to 3 failed login attempts.";
+      } else {
+        const remainingAttempts = 3 - user.loginAttempts;
+        message = `Incorrect password. You have ${remainingAttempts} attempts remaining before your account is locked.`;
+      }
+
+      await user.save();
+
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: message,
       });
     }
 
-    // 4️⃣ Success
+    // 5️⃣ Password matches - Reset attempts and lock status
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    // 6️⃣ Success
     return res.status(200).json({
       success: true,
       message: "Login successful",
