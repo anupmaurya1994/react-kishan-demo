@@ -8,6 +8,7 @@ import {
   deleteQuestion,
   bulkApproveQuestions,
   publishExam,
+  getPublishedExam,
   generateAIQuestions,
   regenerateAIQuestions,
   getExamStatus
@@ -95,6 +96,11 @@ router.get(
   "/:examId/status",
   protect,
   getExamStatus
+);
+// GET PUBLIC PUBLISHED EXAM DETAILS (For Candidates)
+router.get(
+  "/public/:publishedExamId",
+  getPublishedExam
 );
 
 export default router;

@@ -529,7 +529,7 @@ export const publishExam = async (req, res) => {
       0
     );
 
-    await PublishedExam.create({
+    const publishedExam = await PublishedExam.create({
       examId: exam._id,
       questions: approvedQuestions.map((q) => ({
         questionId: q._id,
@@ -543,11 +543,15 @@ export const publishExam = async (req, res) => {
     exam.status = "PUBLISHED";
     await exam.save();
 
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const challengeLink = `${clientUrl}/challenge/${publishedExam._id}`;
+
     return res.status(200).json({
       success: true,
       message: "Exam published successfully",
       totalQuestions: approvedQuestions.length,
       totalMarks,
+      challengeLink,
     });
   } catch (error) {
     return res.status(500).json({
@@ -588,6 +592,37 @@ export const getExamStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET PUBLISHED EXAM (PUBLIC)
+========================= */
+export const getPublishedExam = async (req, res) => {
+  try {
+    const publishedExam = await PublishedExam.findById(
+      req.params.publishedExamId
+    ).populate({
+      path: 'examId',
+      select: 'title instructions duration subjects fileCount',
+    });
+
+    if (!publishedExam) {
+      return res.status(404).json({
+        success: false,
+        message: "Published exam not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: publishedExam,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Invalid exam link",
     });
   }
 };

@@ -3,35 +3,36 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/token.js";
 
 /* =========================
-   REGISTER (ONLY ONCE)
+   REGISTER
 ========================= */
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { firstName, lastName, email, password } = req.body;
 
     // 1️⃣ Validate input
-    if (!name || !email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Name, email and password are required",
+        message: "First name, last name, email and password are required",
       });
     }
 
-    // 2️⃣ Allow ONLY ONE user
-    const existingUser = await User.findOne();
+    // 2️⃣ Check if email is already taken
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "Admin user already exists",
+        message: "Teacher with this email already exists",
       });
     }
 
     // 3️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4️⃣ Create admin user
+    // 4️⃣ Create teacher user
     const user = await User.create({
-      name,
+      firstName,
+      lastName,
       email,
       password: hashedPassword,
     });
@@ -39,7 +40,7 @@ export const register = async (req, res) => {
     // 5️⃣ Response
     return res.status(201).json({
       success: true,
-      message: "Admin user registered successfully",
+      message: "Teacher registered successfully",
       token: generateToken(user),
     });
 
