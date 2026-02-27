@@ -73,7 +73,7 @@ export default function Dashboard() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-2">
+                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => setLocation("/settings")}>
                   <Settings className="h-4 w-4 text-slate-500" />
                   <span>Settings</span>
                 </DropdownMenuItem>
