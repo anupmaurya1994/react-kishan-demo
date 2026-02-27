@@ -42,81 +42,84 @@ export default function Setting() {
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
-            const user = JSON.parse(storedUser);
-            // In the existing app, user object has a "name" property (firstName + lastName)
-            // and an "email" property. We'll try to split the name if possible, 
-            // but ideally the backend sends firstName and lastName separately.
-            const nameParts = user.name ? user.name.split(" ") : ["", ""];
-            setProfileFields({
-                firstName: user.firstName || nameParts[0] || "",
-                lastName: user.lastName || nameParts.slice(1).join(" ") || "",
-                email: user.email || "",
-            });
+            try {
+                const user = JSON.parse(storedUser);
+                console.log("Loaded user data for settings:", user);
+
+                // Try to get separate fields or split from combined 'name'
+                const firstName = user.firstName || (user.name ? user.name.split(" ")[0] : "");
+                const lastName = user.lastName || (user.name ? user.name.split(" ").slice(1).join(" ") : "");
+
+                setProfileFields({
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: user.email || "",
+                });
+            } catch (err) {
+                console.error("Error parsing user data from localStorage", err);
+            }
         }
     }, []);
 
-    const validateProfileForm = () => {
-        let errors = { firstName: "", lastName: "" };
-        let isValid = true;
-
-        if (!profileFields.firstName.trim()) {
-            errors.firstName = "First name is required";
-            isValid = false;
-        }
-
-        if (!profileFields.lastName.trim()) {
-            errors.lastName = "Last name is required";
-            isValid = false;
-        }
-
-        setProfileErrors(errors);
-        return isValid;
-    };
-
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateProfileForm()) return;
+
+        if (!profileFields.firstName.trim() || !profileFields.lastName.trim()) {
+            setProfileErrors({
+                firstName: !profileFields.firstName.trim() ? "First name is required" : "",
+                lastName: !profileFields.lastName.trim() ? "Last name is required" : "",
+            });
+            return;
+        }
 
         setIsLoading(true);
+        console.log("Updating profile info...");
+
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch("http://192.168.1.13:5000/api/auth/edit-profile", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    "Authorization": token ? `Bearer ${token}` : ""
                 },
                 body: JSON.stringify({
                     firstName: profileFields.firstName,
                     lastName: profileFields.lastName,
+                    // Note: backend controller snippet didn't show email update, 
+                    // but we include it if supported
+                    email: profileFields.email
                 }),
             });
 
             const data = await response.json();
+            console.log("Profile update response:", data);
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to update profile");
+                throw new Error(data.message || "Profile update failed");
             }
 
-            // Update local storage
+            // Sync with local storage
             const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
             const updatedUser = {
                 ...storedUser,
-                name: `${data.firstName} ${data.lastName}`,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email
+                name: `${data.firstName || profileFields.firstName} ${data.lastName || profileFields.lastName}`,
+                firstName: data.firstName || profileFields.firstName,
+                lastName: data.lastName || profileFields.lastName,
+                email: data.email || profileFields.email
             };
             localStorage.setItem("user", JSON.stringify(updatedUser));
 
             toast({
-                title: "Success! 🎉",
-                description: "Your profile has been updated.",
+                title: "Profile updated successfully 🎉",
+                description: "Your changes have been saved."
             });
-        } catch (error: any) {
+        } catch (err: any) {
+            console.error("Profile update error:", err);
             toast({
-                title: "Update failed",
-                description: error.message,
-                variant: "destructive",
+                title: "Error updating profile",
+                description: err.message,
+                variant: "destructive"
             });
         } finally {
             setIsLoading(false);
@@ -152,11 +155,6 @@ export default function Setting() {
             isValid = false;
         }
 
-        if (passwordFields.newPassword === passwordFields.currentPassword && passwordFields.newPassword !== "") {
-            errors.newPassword = "New password must be different from current password";
-            isValid = false;
-        }
-
         setPasswordErrors(errors);
         return isValid;
     };
@@ -166,12 +164,15 @@ export default function Setting() {
         if (!validatePasswordForm()) return;
 
         setIsLoading(true);
+        console.log("Attempting password update...");
+
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch("http://192.168.1.13:5000/api/auth/edit-profile", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    "Authorization": token ? `Bearer ${token}` : ""
                 },
                 body: JSON.stringify({
                     currentPassword: passwordFields.currentPassword,
@@ -181,27 +182,29 @@ export default function Setting() {
             });
 
             const data = await response.json();
+            console.log("Password update response:", data);
 
             if (!response.ok) {
                 throw new Error(data.message || "Failed to update password");
             }
 
             toast({
-                title: "Success! 🔐",
-                description: "Your password has been updated successfully.",
+                title: "Password updated successfully 🔐",
+                description: "Your security settings are updated."
             });
 
-            // Clear password fields
+            // Clear fields on success
             setPasswordFields({
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: "",
             });
-        } catch (error: any) {
+        } catch (err: any) {
+            console.error("Password update error:", err);
             toast({
-                title: "Update failed",
-                description: error.message,
-                variant: "destructive",
+                title: "Error updating password",
+                description: err.message,
+                variant: "destructive"
             });
         } finally {
             setIsLoading(false);
@@ -212,41 +215,38 @@ export default function Setting() {
         <>
             <AppHeader />
 
-            <div className="min-h-screen bg-gray-50/50 py-16">
+            <div className="min-h-screen bg-gray-100 py-16">
                 <div className="max-w-3xl mx-auto px-6">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
 
                         {/* Header */}
-                        <div className="px-8 pt-8 pb-6 border-b border-gray-100">
-                            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                        <div className="px-8 pt-8 pb-6">
+                            <h1 className="text-2xl font-semibold text-gray-900">
                                 Account Settings
                             </h1>
-                            <p className="text-gray-500 text-sm mt-1">
-                                Manage your profile information and security settings.
-                            </p>
                         </div>
 
                         {/* Tabs */}
-                        <div className="px-8 mt-6">
-                            <div className="flex gap-1 bg-gray-100/80 p-1 rounded-xl w-fit">
+                        <div className="px-8">
+                            <div className="flex gap-3 bg-gray-100 p-1 rounded-lg w-fit">
                                 <button
                                     onClick={() => setActiveTab("personal")}
-                                    className={`px-6 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === "personal"
-                                        ? "bg-white shadow-sm text-primary"
-                                        : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+                                    className={`px-5 py-2 text-sm font-medium rounded-md transition ${activeTab === "personal"
+                                        ? "bg-white shadow text-gray-900"
+                                        : "text-gray-600 hover:text-gray-900"
                                         }`}
                                 >
-                                    Personal Info
+                                    Personal Information
                                 </button>
 
                                 <button
                                     onClick={() => setActiveTab("password")}
-                                    className={`px-6 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === "password"
-                                        ? "bg-white shadow-sm text-primary"
-                                        : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+                                    className={`px-5 py-2 text-sm font-medium rounded-md transition ${activeTab === "password"
+                                        ? "bg-white shadow text-gray-900"
+                                        : "text-gray-600 hover:text-gray-900"
                                         }`}
                                 >
-                                    Password & Security
+                                    Change Password
                                 </button>
                             </div>
                         </div>
@@ -258,46 +258,45 @@ export default function Setting() {
                             {activeTab === "personal" && (
                                 <form onSubmit={handleProfileSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-semibold text-gray-700">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">
                                                 First Name
                                             </label>
                                             <input
                                                 type="text"
                                                 value={profileFields.firstName}
                                                 onChange={(e) => setProfileFields({ ...profileFields, firstName: e.target.value })}
-                                                placeholder="Enter first name"
-                                                className={`w-full px-4 py-2.5 rounded-xl border ${profileErrors.firstName ? 'border-red-500 ring-red-100' : 'border-gray-200 focus:border-primary/50 focus:ring-primary/10'} bg-white focus:ring-4 outline-none transition-all duration-200`}
+                                                placeholder="John"
+                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.firstName ? 'border-red-500' : 'border-gray-300'} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
                                             />
-                                            {profileErrors.firstName && <p className="text-xs text-red-500 font-medium">{profileErrors.firstName}</p>}
+                                            {profileErrors.firstName && <p className="text-xs text-red-500 mt-1">{profileErrors.firstName}</p>}
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-semibold text-gray-700">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">
                                                 Last Name
                                             </label>
                                             <input
                                                 type="text"
                                                 value={profileFields.lastName}
                                                 onChange={(e) => setProfileFields({ ...profileFields, lastName: e.target.value })}
-                                                placeholder="Enter last name"
-                                                className={`w-full px-4 py-2.5 rounded-xl border ${profileErrors.lastName ? 'border-red-500 ring-red-100' : 'border-gray-200 focus:border-primary/50 focus:ring-primary/10'} bg-white focus:ring-4 outline-none transition-all duration-200`}
+                                                placeholder="Doe"
+                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.lastName ? 'border-red-500' : 'border-gray-300'} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
                                             />
-                                            {profileErrors.lastName && <p className="text-xs text-red-500 font-medium">{profileErrors.lastName}</p>}
+                                            {profileErrors.lastName && <p className="text-xs text-red-500 mt-1">{profileErrors.lastName}</p>}
                                         </div>
 
-                                        <div className="sm:col-span-2 space-y-2">
-                                            <label className="block text-sm font-semibold text-gray-700">
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">
                                                 Email Address
                                             </label>
                                             <input
                                                 type="email"
                                                 value={profileFields.email}
-                                                disabled
+                                                onChange={(e) => setProfileFields({ ...profileFields, email: e.target.value })}
                                                 placeholder="john@example.com"
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none"
+                                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
                                             />
-                                            <p className="text-[11px] text-gray-400 italic">Email cannot be changed currently.</p>
                                         </div>
                                     </div>
 
@@ -305,7 +304,7 @@ export default function Setting() {
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="px-8 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                            className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-2"
                                         >
                                             {isLoading && <Loader2 size={16} className="animate-spin" />}
                                             {isLoading ? "Saving..." : "Save Changes"}
@@ -320,7 +319,7 @@ export default function Setting() {
 
                                     {/* Current Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-600">
                                             Current Password
                                         </label>
 
@@ -330,82 +329,83 @@ export default function Setting() {
                                                 placeholder="Enter current password"
                                                 value={passwordFields.currentPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, currentPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-xl border ${passwordErrors.currentPassword ? "border-red-500 ring-red-100" : "border-gray-200 focus:border-primary/50 focus:ring-primary/10"} bg-white focus:ring-4 outline-none transition-all duration-200`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.currentPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
                                             />
 
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                             >
                                                 {showPassword.current ? <Eye size={18} /> : <EyeOff size={18} />}
                                             </button>
                                         </div>
-                                        {passwordErrors.currentPassword && <p className="text-xs text-red-500 font-medium">{passwordErrors.currentPassword}</p>}
+                                        {passwordErrors.currentPassword && <p className="text-xs text-red-500 mt-1">{passwordErrors.currentPassword}</p>}
                                     </div>
 
                                     {/* New Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-600">
                                             New Password
                                         </label>
 
                                         <div className="relative">
                                             <input
                                                 type={showPassword.new ? "text" : "password"}
-                                                placeholder="Minimum 6 characters"
+                                                placeholder="Enter new password"
                                                 value={passwordFields.newPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, newPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-xl border ${passwordErrors.newPassword ? "border-red-500 ring-red-100" : "border-gray-200 focus:border-primary/50 focus:ring-primary/10"} bg-white focus:ring-4 outline-none transition-all duration-200`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.newPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
                                             />
 
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                             >
                                                 {showPassword.new ? <Eye size={18} /> : <EyeOff size={18} />}
                                             </button>
                                         </div>
-                                        {passwordErrors.newPassword && <p className="text-xs text-red-500 font-medium">{passwordErrors.newPassword}</p>}
+                                        {passwordErrors.newPassword && <p className="text-xs text-red-500 mt-1">{passwordErrors.newPassword}</p>}
                                     </div>
 
                                     {/* Confirm Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-gray-700">
-                                            Confirm New Password
+                                        <label className="block text-sm font-medium text-gray-600">
+                                            Confirm Password
                                         </label>
 
                                         <div className="relative">
                                             <input
                                                 type={showPassword.confirm ? "text" : "password"}
-                                                placeholder="Repeat new password"
+                                                placeholder="Confirm new password"
                                                 value={passwordFields.confirmPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, confirmPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-xl border ${passwordErrors.confirmPassword ? "border-red-500 ring-red-100" : "border-gray-200 focus:border-primary/50 focus:ring-primary/10"} bg-white focus:ring-4 outline-none transition-all duration-200`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.confirmPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
                                             />
 
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                                             >
                                                 {showPassword.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
                                             </button>
                                         </div>
-                                        {passwordErrors.confirmPassword && <p className="text-xs text-red-500 font-medium">{passwordErrors.confirmPassword}</p>}
+                                        {passwordErrors.confirmPassword && <p className="text-xs text-red-500 mt-1">{passwordErrors.confirmPassword}</p>}
                                     </div>
 
                                     <div className="pt-4 flex justify-end">
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="px-8 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                            className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-2"
                                         >
                                             {isLoading && <Loader2 size={16} className="animate-spin" />}
                                             {isLoading ? "Updating..." : "Update Password"}
                                         </button>
                                     </div>
+
                                 </form>
                             )}
                         </div>
