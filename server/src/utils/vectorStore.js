@@ -1,6 +1,5 @@
 import { MongoDBAtlasVectorSearch } from "@langchain/mongodb";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { MongoClient } from "mongodb";
 import mongoose from "mongoose";
@@ -19,20 +18,16 @@ export const getVectorStore = async () => {
 
     const collection = client.db(process.env.DB_NAME || "test").collection("vectors");
 
-    // Note: DeepSeek doesn't provide an embeddings endpoint.
-    // We use OpenAIEmbeddings if a key is provided, otherwise we fallback to a placeholder.
-    let embeddings;
-    if (process.env.OPENAI_API_KEY) {
-        console.log("✅ Using OpenAI Embeddings");
-        embeddings = new OpenAIEmbeddings({
-            openAIApiKey: process.env.OPENAI_API_KEY,
-        });
-    } else {
-        console.log("ℹ️ OPENAI_API_KEY missing. Using local HuggingFace embeddings (all-MiniLM-L6-v2)");
-        embeddings = new HuggingFaceTransformersEmbeddings({
-            model: "Xenova/all-MiniLM-L6-v2",
-        });
+    // OpenAI Embeddings — requires OPENAI_API_KEY in .env
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error("❌ OPENAI_API_KEY is missing from .env file. It is required for embeddings.");
     }
+
+    console.log("✅ Using OpenAI Embeddings (text-embedding-3-small)");
+    const embeddings = new OpenAIEmbeddings({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+        modelName: "text-embedding-3-small",
+    });
 
     vectorStore = new MongoDBAtlasVectorSearch(embeddings, {
         collection,
