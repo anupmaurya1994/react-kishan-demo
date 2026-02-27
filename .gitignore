@@ -3,7 +3,7 @@ server/.env
 
 # dependencies
 server/node_modules/
-
+node_modules
 # uploads (user files)
 server/uploads/
 

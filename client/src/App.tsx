@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import CreateExam from "@/pages/create-exam";
 import QuestionsList from "@/pages/questions-list";
 import ExamLists from "@/pages/exam-lists";
+import Setting from "./pages/Setting";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/create-exam" component={CreateExam} />
       <Route path="/exams/:id/questions" component={QuestionsList} />
       <Route path="/exam-lists" component={ExamLists} />
+      <Route path="/settings" component={Setting} />
       <Route component={NotFound} />
     </Switch>
   );
