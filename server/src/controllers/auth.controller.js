@@ -42,6 +42,7 @@ export const register = async (req, res) => {
       success: true,
       message: "Teacher registered successfully",
       token: generateToken(user),
+      firstName: user.firstName,
     });
 
   } catch (error) {
@@ -120,6 +121,9 @@ export const login = async (req, res) => {
       success: true,
       message: "Login successful",
       token: generateToken(user),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
     });
 
   } catch (error) {
