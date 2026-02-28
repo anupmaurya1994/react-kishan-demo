@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { BrainCircuit, ChevronLeft, Search, Filter, Edit2, Trash2, RefreshCw, Eye, CheckCircle2, Copy, ExternalLink, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { Label } from "@/components/ui/label";
 
 export default function QuestionsList() {
   const { id } = useParams();
@@ -68,7 +69,7 @@ export default function QuestionsList() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               onClick={() => setLocation("/exam-lists")}
               className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-full px-6"
             >
@@ -117,10 +118,9 @@ export default function QuestionsList() {
                       <Badge variant="outline" className="rounded-full font-normal">{q.type}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className={`text-xs font-semibold ${
-                        q.difficulty === 'Easy' ? 'text-emerald-600' : 
-                        q.difficulty === 'Medium' ? 'text-blue-600' : 'text-rose-600'
-                      }`}>{q.difficulty}</span>
+                      <span className={`text-xs font-semibold ${q.difficulty === 'Easy' ? 'text-emerald-600' :
+                          q.difficulty === 'Medium' ? 'text-blue-600' : 'text-rose-600'
+                        }`}>{q.difficulty}</span>
                     </TableCell>
                     <TableCell className="font-bold">{q.marks}</TableCell>
                     <TableCell className="text-right">
@@ -164,7 +164,7 @@ export default function QuestionsList() {
                 </div>
                 <SheetTitle className="text-2xl">{selectedQuestion.id}: Question Details</SheetTitle>
               </SheetHeader>
-              
+
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Full Question</Label>
