@@ -103,13 +103,42 @@ export default function QuestionsListPage() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
+      // Filter only approved questions
+      const approvedQuestions = examData.questions.filter((q: any) => q.isLocked);
+
+      if (approvedQuestions.length === 0) {
+        throw new Error("No approved questions to publish. Please approve at least one question.");
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const publishedExam = {
+        id: Date.now(), // Generate a unique ID
+        title: examData.title,
+        subject: examData.subject,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        questions: approvedQuestions.length,
+        status: "Published",
+        statusColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
+      };
+
+      // Get existing published exams from localStorage
+      const existingExams = JSON.parse(localStorage.getItem("published_exams") || "[]");
+      localStorage.setItem("published_exams", JSON.stringify([publishedExam, ...existingExams]));
+
       return { success: true };
     },
     onSuccess: () => {
       setPublishStatus("Published");
       toast.success("Exam published successfully!");
+      // Redirect to dashboard after a short delay to let toast be seen
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
     },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to publish exam");
+    }
   });
 
   const regenerateMutation = useMutation({

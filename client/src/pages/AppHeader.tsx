@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,16 +19,10 @@ type UserType = {
 
 export default function AppHeader() {
     const [, setLocation] = useLocation();
-    const [user, setUser] = useState<UserType | null>(null);
-
-    useEffect(() => {
-        const stored = localStorage.getItem("user");
-        if (stored) setUser(JSON.parse(stored));
-    }, []);
+    const { user, logout } = useAuth();
 
     const handleLogout = () => {
-        localStorage.removeItem("user");
-        setLocation("/");
+        logout();
     };
 
     return (

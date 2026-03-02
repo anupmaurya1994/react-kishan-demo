@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import AppHeader from "../pages/AppHeader";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "../hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
 
 export default function Setting() {
+    const { user: authUser } = useAuth();
     const [activeTab, setActiveTab] = useState("personal");
     const [isLoading, setIsLoading] = useState(false);
 

@@ -108,12 +108,10 @@ export default function CreateExam() {
     formState: { errors },
   } = useForm<ExamFormValues>({
     resolver: zodResolver(examSchema),
-    // defaultValues: {
-    //   difficulty: "medium",
-    //   questionCount: 4,
-    //   timeLimit: 60,
-    // },
-  });
+    defaultValues: {
+      difficulty: "",
+    },
+  })
 
   useEffect(() => {
     const isEditing = sessionStorage.getItem("isEditingExam");
@@ -134,8 +132,6 @@ export default function CreateExam() {
           questionCount: parsed.questions?.length || 4,
         });
       }
-
-      // VERY IMPORTANT
       sessionStorage.removeItem("isEditingExam");
     }
   }, [reset]);
@@ -159,13 +155,14 @@ export default function CreateExam() {
       return result;
     },
     onSuccess: (data, values) => {
-      // Step 3: Store in Session Storage for Demo Persistence
       const examData = {
         questions: data,
         timeLimit: values.timeLimit,
         topics: values.topics,
         title: values.title,
-        subject: values.subject
+        subject: values.subject,
+        difficulty: values.difficulty,      // ✅ ADD THIS
+        description: values.description     // ✅ ADD THIS
       };
       sessionStorage.setItem("current_exam_data", JSON.stringify(examData));
 
@@ -286,10 +283,14 @@ export default function CreateExam() {
                       <Controller
                         name="difficulty"
                         control={control}
+                        defaultValue=""   // ✅ ADD THIS LINE
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger className={`rounded-xl ${errors.difficulty ? "border-destructive focus-visible:ring-destructive" : ""}`}>
-                              <SelectValue placeholder="Select level" />
+                          <Select
+                            value={field.value || ""}  // ✅ important
+                            onValueChange={(value) => field.onChange(value)}  // ✅ important
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select difficulty" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="easy">Easy</SelectItem>

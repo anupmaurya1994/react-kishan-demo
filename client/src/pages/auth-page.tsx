@@ -8,17 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrainCircuit, Sparkles, BookOpenCheck } from "lucide-react";
 import authBg from "../assets/images/auth-bg.png";
 import { toast } from "../hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
 
 export default function AuthPage() {
+  const { login } = useAuth();
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({});
   const [loginFields, setLoginFields] = useState({ email: "", password: "" });
-
-  const [user, setUser] = useState<{ name: string; email: string } | null>(() => {
-    const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
-  });
 
   const [signupValues, setSignupValues] = useState({
     firstName: "",
@@ -46,12 +43,7 @@ export default function AuthPage() {
     message?: string;
   }
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  // user and storedUser state is now managed by AuthProvider
 
   const validateEmail = (email: string) => {
     if (!email) return "Email is required";
@@ -266,9 +258,7 @@ export default function AuthPage() {
         email,
       };
 
-      setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
-      localStorage.setItem("token", data.token);
+      login(newUser, data.token);
 
       toast({
         title: "Login successful 🎉",
@@ -335,8 +325,10 @@ export default function AuthPage() {
         email,
       };
 
-      setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      // Note: Signup does not return a token in the current implementation, 
+      // so we just log them in with an empty token or let them log in manually.
+      // Based on current code, it seems the user is "logged in" after signup but redirected to "/" (login)
+      login(newUser, "");
 
       toast({
         title: "Account created successfully 🎉",

@@ -1,99 +1,42 @@
 import { Link, useLocation } from "wouter";
+import AppHeader from "./AppHeader";
+import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BrainCircuit, Plus, FileText, Clock, Settings, LogOut, FileUp, Sparkles, CheckCircle2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { Plus, FileText, Clock, FileUp, Sparkles, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const handleLogout = () => {
-    setLocation("/");
+  type Exam = {
+    id: number;
+    title: string;
+    subject: string;
+    date: string;
+    questions: number;
+    status: string;
   };
 
-  const mockExams = [
-    { id: 1, title: "Midterm Biology 101", subject: "Biology", date: "Oct 12, 2023", questions: 45, status: "Published", statusColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-    { id: 2, title: "Physics Chapter 4-5", subject: "Physics", date: "Oct 15, 2023", questions: 30, status: "Draft", statusColor: "bg-slate-100 text-slate-800 border-slate-200" },
-    { id: 3, title: "Computer Science Finals", subject: "Computer Science", date: "Oct 20, 2023", questions: 50, status: "Processing", statusColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  ];
-
-  const storedUser = localStorage.getItem("user");
-
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [exams, setExams] = useState<Exam[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) setUser(JSON.parse(stored));
+    const published = JSON.parse(localStorage.getItem("published_exams") || "[]");
+    setExams(published);
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <BrainCircuit className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">ExamAI</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Button variant="outline" className="hidden md:flex gap-2 rounded-full border-slate-200">
-              <BookOpenIcon className="h-4 w-4" />
-              <span>Documentation</span>
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transition-transform hover:scale-105">
-                    <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Teacher" />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">JS</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    {/* <p className="text-sm font-medium leading-none">Prof. Jane Smith</p> */}
-                    <p className="text-sm font-medium leading-none">{user?.name || "Guest User"}</p>
-                    {/* <p className="text-xs leading-none text-slate-500">jane.smith@state.edu</p> */}
-                    <p className="text-xs leading-none text-slate-500">{user?.email || "guest@example.com"}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => setLocation("/settings")}>
-                  <Settings className="h-4 w-4 text-slate-500" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10" onClick={handleLogout} data-testid="menu-logout">
-                  <LogOut className="h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50/50 flex flex-col font-inter">
+      <AppHeader />
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-8 animate-in fade-in duration-700">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Welcome back, {user?.name || "Guest"} 👋</h1>
-            <p className="text-slate-500 font-inter">Here's an overview of your recent exams and generations.</p>
+            <p className="text-slate-500 font-medium">Here's an overview of your recent exams and generations.</p>
           </div>
           <Button
             size="lg"
@@ -117,7 +60,7 @@ export default function Dashboard() {
               <CardTitle className="text-xl text-slate-800">Upload Materials</CardTitle>
             </CardHeader>
             <CardContent className="relative z-10">
-              <p className="text-slate-500 text-sm font-inter">Upload PDFs, DOCX, or images containing your syllabus or notes.</p>
+              <p className="text-slate-500 text-sm">Upload PDFs, DOCX, or images containing your syllabus or notes.</p>
             </CardContent>
           </Card>
 
@@ -130,7 +73,7 @@ export default function Dashboard() {
               <CardTitle className="text-xl text-slate-800">AI Generation</CardTitle>
             </CardHeader>
             <CardContent className="relative z-10">
-              <p className="text-slate-500 text-sm font-inter">Our AI instantly drafts MCQs, short answers, and essay questions.</p>
+              <p className="text-slate-500 text-sm">Our AI instantly drafts MCQs, short answers, and essay questions.</p>
             </CardContent>
           </Card>
 
@@ -143,7 +86,7 @@ export default function Dashboard() {
               <CardTitle className="text-xl text-slate-800">Review & Publish</CardTitle>
             </CardHeader>
             <CardContent className="relative z-10">
-              <p className="text-slate-500 text-sm font-inter">Edit questions, adjust difficulty, and publish to your students.</p>
+              <p className="text-slate-500 text-sm">Edit questions, adjust difficulty, and publish to your students.</p>
             </CardContent>
           </Card>
         </div>
@@ -158,22 +101,19 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockExams.map((exam) => (
-              <Card key={exam.id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-xl group cursor-pointer" data-testid={`card-exam-${exam.id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium text-xs border ${exam.statusColor}`}>
+            {exams.map((exam) => (
+              <Card key={exam.id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white" data-testid={`card-exam-${exam.id}`}>
+                <CardHeader className="pb-3 px-6 pt-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <Badge variant="secondary" className={`rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider border-0 ${exam.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {exam.status}
                     </Badge>
-                    <div className="bg-slate-100 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <FileText className="h-4 w-4 text-slate-500" />
-                    </div>
                   </div>
-                  <CardTitle className="text-lg text-slate-800 leading-tight group-hover:text-primary transition-colors">{exam.title}</CardTitle>
-                  <CardDescription className="text-sm font-medium text-slate-500">{exam.subject}</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors mb-1">{exam.title}</CardTitle>
+                  <CardDescription className="text-base font-semibold text-blue-500/80">{exam.subject}</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="flex items-center gap-4 text-sm text-slate-500 font-inter">
+                <CardContent className="pb-8 px-6">
+                  <div className="flex items-center gap-4 text-sm text-slate-400 font-medium">
                     <div className="flex items-center gap-1.5">
                       <FileText className="h-4 w-4" />
                       <span>{exam.questions} Questions</span>

@@ -17,7 +17,7 @@ export function ProtectedRoute({ component: Component }: { component: ComponentT
   }
 
   if (!user) {
-    return <Redirect to="/login" />;
+    return <Redirect to="/" />;
   }
 
   return <Component />;
