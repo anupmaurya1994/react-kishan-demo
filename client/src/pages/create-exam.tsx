@@ -16,7 +16,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { QuestionsList } from "@/components/QuestionsList";
 import AppHeader from "./AppHeader";
 
 const examSchema = z.object({

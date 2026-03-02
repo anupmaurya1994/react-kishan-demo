@@ -152,6 +152,26 @@ export default function QuestionsListPage() {
     toast.success("Question deleted");
   };
 
+  const handleApprove = (questionId: string) => {
+    const updatedQuestions = examData.questions.map((q: any) =>
+      q.id === questionId ? { ...q, isLocked: true } : q
+    );
+    const updatedData = { ...examData, questions: updatedQuestions };
+    setExamData(updatedData);
+    sessionStorage.setItem("current_exam_data", JSON.stringify(updatedData));
+    toast.success("Question approved and locked");
+  };
+
+  const handleUnlock = (questionId: string) => {
+    const updatedQuestions = examData.questions.map((q: any) =>
+      q.id === questionId ? { ...q, isLocked: false } : q
+    );
+    const updatedData = { ...examData, questions: updatedQuestions };
+    setExamData(updatedData);
+    sessionStorage.setItem("current_exam_data", JSON.stringify(updatedData));
+    toast.success("Question unlocked");
+  };
+
   const handleAddManual = () => {
     const newId = (examData.questions.length + 1).toString();
 
@@ -164,6 +184,7 @@ export default function QuestionsListPage() {
       answer: "",
       type: "MCQ",
       difficulty: "medium",
+      isLocked: false,
     };
 
     // Only open modal
@@ -265,8 +286,10 @@ export default function QuestionsListPage() {
           {/* QUESTIONS LIST */}
           <QuestionsList
             questions={examData.questions}
-            onEdit={setSelectedQuestion}
+            onUpdate={handleUpdateQuestion}
             onDelete={handleDelete}
+            onApprove={handleApprove}
+            onUnlock={handleUnlock}
             onAddManual={handleAddManual}
             onRegenerate={() => regenerateMutation.mutate()}
             isRegenerating={regenerateMutation.isPending}
