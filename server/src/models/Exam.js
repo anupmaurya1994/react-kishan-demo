@@ -9,6 +9,8 @@ const examSchema = new mongoose.Schema(
     subjects: [String],
     language: String,
     numberOfQuestions: Number,
+    duration: Number, // in minutes
+    topics: [String],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

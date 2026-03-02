@@ -10,6 +10,7 @@ const publishedExamSchema = new mongoose.Schema(
       {
         questionId: mongoose.Schema.Types.ObjectId,
         text: String,
+        options: [String],
         marks: Number
       }
     ],

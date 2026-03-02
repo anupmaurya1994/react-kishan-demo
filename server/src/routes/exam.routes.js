@@ -30,7 +30,7 @@ router.post(
 
 // ADD MANUAL QUESTION (Teacher only)
 router.post(
-  "/:examId/question/manual",
+  "/:examId/questions/manual",
   protect,
   addManualQuestion
 );
@@ -44,28 +44,28 @@ router.get(
 
 // APPROVE QUESTION (Teacher only)
 router.patch(
-  "/question/:id/approve",
+  "/questions/:id/approve",
   protect,
   approveQuestion
 );
 
 // EDIT QUESTION (Teacher only)
-router.patch(
-  "/question/:id",
+router.put(
+  "/questions/:id",
   protect,
   updateQuestion
 );
 
 // DELETE QUESTION (Teacher only)
 router.delete(
-  "/question/:id",
+  "/questions/:id",
   protect,
   deleteQuestion
 );
 
 // BULK APPROVE ALL QUESTIONS (Teacher only)
 router.patch(
-  "/:examId/questions/approve-all",
+  "/:examId/approve-all",
   protect,
   bulkApproveQuestions
 );
@@ -79,7 +79,7 @@ router.post(
 
 // GENERATE AI QUESTIONS
 router.post(
-  "/:examId/generate",
+  "/:examId/generate-ai",
   protect,
   generateAIQuestions
 );
@@ -99,7 +99,7 @@ router.get(
 );
 // GET PUBLIC PUBLISHED EXAM DETAILS (For Candidates)
 router.get(
-  "/public/:publishedExamId",
+  "/challenge/:publishedExamId",
   getPublishedExam
 );
 

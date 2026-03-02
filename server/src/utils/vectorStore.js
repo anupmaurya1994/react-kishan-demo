@@ -18,6 +18,24 @@ export const getVectorStore = async () => {
 
     const collection = client.db(process.env.DB_NAME || "test").collection("vectors");
 
+    // 🧪 STATIC MOCK EMBEDDINGS (for testing)
+    if (process.env.USE_STATIC_AI === "true") {
+        console.log("🧪 Using Static Mock Embeddings");
+        const mockEmbeddings = {
+            embedQuery: async () => new Array(1536).fill(0),
+            embedDocuments: async (docs) => docs.map(() => new Array(1536).fill(0)),
+        };
+
+        vectorStore = new MongoDBAtlasVectorSearch(mockEmbeddings, {
+            collection,
+            indexName: "vector_index",
+            textKey: "text",
+            embeddingKey: "embedding",
+        });
+
+        return vectorStore;
+    }
+
     // OpenAI Embeddings — requires OPENAI_API_KEY in .env
     if (!process.env.OPENAI_API_KEY) {
         throw new Error("❌ OPENAI_API_KEY is missing from .env file. It is required for embeddings.");

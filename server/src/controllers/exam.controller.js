@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Exam from "../models/Exam.js";
 import Question from "../models/Question.js";
 import PublishedExam from "../models/PublishedExam.js";
@@ -25,6 +26,7 @@ export const createExam = async (req, res) => {
     const exam = await Exam.create({
       ...req.body,
       subjects: JSON.parse(req.body.subjects || "[]"),
+      topics: JSON.parse(req.body.topics || "[]"),
       files: filesData,
       createdBy: req.user._id,
     });
@@ -200,7 +202,7 @@ export const updateQuestion = async (req, res) => {
       });
     }
 
-    const allowedFields = ["text", "marks", "subject", "difficulty"];
+    const allowedFields = ["text", "marks", "subject", "difficulty", "options", "correctAnswer"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         question[field] = req.body[field];
@@ -336,29 +338,36 @@ const processNextInQueue = async () => {
 
     const combinedText = exam.files.map((f) => f.extractedText).join("\n");
 
+    // Safety fallback for subjects and question count
+    const subjectsToProcess = exam.subjects && exam.subjects.length > 0 ? exam.subjects : ["General"];
+    const totalQty = exam.numberOfQuestions && exam.numberOfQuestions > 0 ? exam.numberOfQuestions : 4;
+
     // Process subjects sequentially
-    for (let i = 0; i < exam.subjects.length; i++) {
-      const subject = exam.subjects[i];
-      exam.processingMessage = `Generating questions for ${subject}... (${i + 1}/${exam.subjects.length})`;
+    for (let i = 0; i < subjectsToProcess.length; i++) {
+      const subject = subjectsToProcess[i];
+      exam.processingMessage = `Generating questions for ${subject}... (${i + 1}/${subjectsToProcess.length})`;
       await exam.save();
 
       const questions = await generateQuestionsFromText({
         text: combinedText,
-        difficulty: exam.difficulty,
+        difficulty: exam.difficulty || "Medium",
         subjects: [subject], // Process one subject at a time
-        count: Math.ceil(exam.numberOfQuestions / exam.subjects.length), // Distribute questions
-        language: exam.language,
+        count: Math.ceil(totalQty / subjectsToProcess.length), // Distribute questions
+        language: exam.language || "English",
+        topics: exam.topics,
       });
 
-      await Question.insertMany(
-        questions.map((q) => ({
-          examId: exam._id,
-          ...q,
-          source: "AI",
-          isApproved: false,
-          createdBy: exam.createdBy,
-        }))
-      );
+      if (questions && questions.length > 0) {
+        await Question.insertMany(
+          questions.map((q) => ({
+            examId: exam._id,
+            ...q,
+            source: "AI",
+            isApproved: false,
+            createdBy: exam.createdBy,
+          }))
+        );
+      }
     }
 
     exam.status = "REVIEW";
@@ -534,6 +543,7 @@ export const publishExam = async (req, res) => {
       questions: approvedQuestions.map((q) => ({
         questionId: q._id,
         text: q.text,
+        options: q.options,
         marks: q.marks,
       })),
       totalMarks,
@@ -601,9 +611,14 @@ export const getExamStatus = async (req, res) => {
 ========================= */
 export const getPublishedExam = async (req, res) => {
   try {
-    const publishedExam = await PublishedExam.findById(
-      req.params.publishedExamId
-    ).populate({
+    const { publishedExamId } = req.params;
+
+    // Search by either publishedExam ID or common Exam ID
+    const query = mongoose.isValidObjectId(publishedExamId)
+      ? { $or: [{ _id: publishedExamId }, { examId: publishedExamId }] }
+      : { _id: null };
+
+    const publishedExam = await PublishedExam.findOne(query).populate({
       path: 'examId',
       select: 'title instructions duration subjects fileCount',
     });
