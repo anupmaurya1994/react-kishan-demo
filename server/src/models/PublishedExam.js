@@ -15,6 +15,7 @@ const publishedExamSchema = new mongoose.Schema(
       }
     ],
     totalMarks: Number,
+    pdfPath: String,
     publishedAt: Date
   },
   { timestamps: true }

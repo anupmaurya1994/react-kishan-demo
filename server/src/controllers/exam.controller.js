@@ -5,6 +5,9 @@ import PublishedExam from "../models/PublishedExam.js";
 import { extractTextFromFile } from "../utils/extractText.js";
 import { generateQuestionsFromText } from "../utils/aiQuestionGenerator.js";
 import { storeTextToVector } from "../utils/vectorStore.js";
+import { generateExamPDF } from "../utils/pdfGenerator.js";
+import path from "path";
+import fs from "fs";
 
 /* =========================
    CREATE EXAM
@@ -538,6 +541,28 @@ export const publishExam = async (req, res) => {
       0
     );
 
+    // Create a directory for exams if it doesn't exist
+    const examsDir = path.join(process.cwd(), "uploads", "exams");
+    if (!fs.existsSync(examsDir)) {
+      fs.mkdirSync(examsDir, { recursive: true });
+    }
+
+    const pdfFilename = `exam_${exam._id}_${Date.now()}.pdf`;
+    const pdfPath = path.join(examsDir, pdfFilename);
+
+    // Generate PDF
+    await generateExamPDF(
+      {
+        title: exam.title,
+        instructions: exam.instructions,
+        duration: exam.duration,
+        subjects: exam.subjects,
+        totalMarks: totalMarks,
+      },
+      approvedQuestions,
+      pdfPath
+    );
+
     const publishedExam = await PublishedExam.create({
       examId: exam._id,
       questions: approvedQuestions.map((q) => ({
@@ -547,21 +572,22 @@ export const publishExam = async (req, res) => {
         marks: q.marks,
       })),
       totalMarks,
+      pdfPath: `/uploads/exams/${pdfFilename}`,
       publishedAt: new Date(),
     });
 
     exam.status = "PUBLISHED";
     await exam.save();
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    const challengeLink = `${clientUrl}/challenge/${publishedExam._id}`;
+    const serverUrl = process.env.SERVER_URL || "http://localhost:5000";
+    const pdfUrl = `${serverUrl}/uploads/exams/${pdfFilename}`;
 
     return res.status(200).json({
       success: true,
-      message: "Exam published successfully",
+      message: "Exam published and PDF generated successfully",
       totalQuestions: approvedQuestions.length,
       totalMarks,
-      challengeLink,
+      pdfUrl,
     });
   } catch (error) {
     return res.status(500).json({
@@ -606,39 +632,4 @@ export const getExamStatus = async (req, res) => {
   }
 };
 
-/* =========================
-   GET PUBLISHED EXAM (PUBLIC)
-========================= */
-export const getPublishedExam = async (req, res) => {
-  try {
-    const { publishedExamId } = req.params;
-
-    // Search by either publishedExam ID or common Exam ID
-    const query = mongoose.isValidObjectId(publishedExamId)
-      ? { $or: [{ _id: publishedExamId }, { examId: publishedExamId }] }
-      : { _id: null };
-
-    const publishedExam = await PublishedExam.findOne(query).populate({
-      path: 'examId',
-      select: 'title instructions duration subjects fileCount',
-    });
-
-    if (!publishedExam) {
-      return res.status(404).json({
-        success: false,
-        message: "Published exam not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: publishedExam,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Invalid exam link",
-    });
-  }
-};
 
