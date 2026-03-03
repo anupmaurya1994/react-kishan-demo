@@ -6,6 +6,14 @@ const publishedExamSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exam"
     },
+    title: String,
+    description: String,
+    instructions: String,
+    difficulty: String,
+    subjects: [String],
+    language: String,
+    duration: Number,
+    topics: [String],
     questions: [
       {
         questionId: mongoose.Schema.Types.ObjectId,

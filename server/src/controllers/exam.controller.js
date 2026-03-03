@@ -550,21 +550,28 @@ export const publishExam = async (req, res) => {
     const pdfFilename = `exam_${exam._id}_${Date.now()}.pdf`;
     const pdfPath = path.join(examsDir, pdfFilename);
 
+    const examData = {
+      title: exam.title,
+      description: exam.description,
+      instructions: exam.instructions,
+      duration: exam.duration,
+      subjects: exam.subjects,
+      difficulty: exam.difficulty,
+      language: exam.language,
+      topics: exam.topics,
+      totalMarks: totalMarks,
+    };
+
     // Generate PDF
     await generateExamPDF(
-      {
-        title: exam.title,
-        instructions: exam.instructions,
-        duration: exam.duration,
-        subjects: exam.subjects,
-        totalMarks: totalMarks,
-      },
+      examData,
       approvedQuestions,
       pdfPath
     );
 
     const publishedExam = await PublishedExam.create({
       examId: exam._id,
+      ...examData,
       questions: approvedQuestions.map((q) => ({
         questionId: q._id,
         text: q.text,
