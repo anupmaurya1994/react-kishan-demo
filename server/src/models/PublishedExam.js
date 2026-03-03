@@ -6,6 +6,14 @@ const publishedExamSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exam"
     },
+
+    // ✅ ADD THIS
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+
     title: String,
     description: String,
     instructions: String,
@@ -14,6 +22,7 @@ const publishedExamSchema = new mongoose.Schema(
     language: String,
     duration: Number,
     topics: [String],
+
     questions: [
       {
         questionId: mongoose.Schema.Types.ObjectId,
@@ -22,6 +31,7 @@ const publishedExamSchema = new mongoose.Schema(
         marks: Number
       }
     ],
+
     totalMarks: Number,
     pdfPath: String,
     publishedAt: Date

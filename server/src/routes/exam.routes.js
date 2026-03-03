@@ -8,9 +8,14 @@ import {
   deleteQuestion,
   bulkApproveQuestions,
   publishExam,
-  generateAIQuestions,
   regenerateAIQuestions,
-  getExamStatus
+  getExamStatus,  
+  importStaticExam,
+  getAllExams,
+  getPublishedExams,
+  getPublishedExamById,
+  generateAIQuestions,
+  deleteExam
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -19,12 +24,30 @@ import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// GET PUBLISHED EXAMS
+router.get("/published", protect, getPublishedExams);
+
+// GET PUBLISHED EXAM BY ID
+router.get("/published/:id", protect, getPublishedExamById);
+
+
+// GET ALL EXAMS (Teacher only)
+router.get("/", protect, getAllExams);
+
+
 // CREATE EXAM (Teacher only)
 router.post(
   "/create",
   protect,
   upload.array("files", 5),
   createExam
+);
+
+// IMPORT STATIC EXAM (New)
+router.post(
+  "/import-static",
+  protect,
+  importStaticExam
 );
 
 // ADD MANUAL QUESTION (Teacher only)
@@ -95,6 +118,13 @@ router.get(
   "/:examId/status",
   protect,
   getExamStatus
+);
+
+// DELETE EXAM (Teacher only)
+router.delete(
+  "/:examId",
+  protect,
+  deleteExam
 );
 
 export default router;

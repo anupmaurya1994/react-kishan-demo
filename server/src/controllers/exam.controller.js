@@ -498,6 +498,56 @@ export const regenerateAIQuestions = async (req, res) => {
 };
 
 /* =========================
+   IMPORT STATIC EXAM
+========================= */
+export const importStaticExam = async (req, res) => {
+  try {
+    const { examDetails, questions } = req.body;
+
+    if (!examDetails || !questions || !Array.isArray(questions)) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing examDetails or questions array",
+      });
+    }
+
+    // 1. Create the Exam document
+    const exam = await Exam.create({
+      ...examDetails,
+      subjects: examDetails.subjects || [],
+      topics: examDetails.topics || [],
+      createdBy: req.user._id,
+      status: "REVIEW", // Default to review so teacher can check
+    });
+
+    // 2. Format and Insert Questions
+    const formattedQuestions = questions.map((q) => ({
+      ...q,
+      examId: exam._id,
+      createdBy: req.user._id,
+      source: "MANUAL",
+      isApproved: true, // Auto-approve static data from frontend
+    }));
+
+    const result = await Question.insertMany(formattedQuestions);
+
+    return res.status(201).json({
+      success: true,
+      message: "Static exam and questions imported successfully",
+      data: {
+        examId: exam._id,
+        questionCount: result.length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
    PUBLISH EXAM
 ========================= */
 export const publishExam = async (req, res) => {
@@ -571,6 +621,7 @@ export const publishExam = async (req, res) => {
 
     const publishedExam = await PublishedExam.create({
       examId: exam._id,
+      createdBy: req.user._id,   // ✅ ADD THIS
       ...examData,
       questions: approvedQuestions.map((q) => ({
         questionId: q._id,
@@ -639,4 +690,143 @@ export const getExamStatus = async (req, res) => {
   }
 };
 
+/* =========================
+   GET ALL EXAMS (TEACHER)
+========================= */
+export const getAllExams = async (req, res) => {
+  try {
+    const exams = await Exam.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
 
+    // For each exam, count number of questions
+    const examsWithCount = await Promise.all(exams.map(async (exam) => {
+      const questionsCount = await Question.countDocuments({ examId: exam._id });
+      return {
+        ...exam._doc,
+        questionsCount
+      };
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: examsWithCount.length,
+      data: examsWithCount,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET PUBLISHED EXAMS
+========================= */
+export const getPublishedExams = async (req, res) => {
+  try {
+    const publishedExams = await PublishedExam.find({
+      createdBy: req.user._id   // ✅ FILTER BY USER
+    }).sort({ publishedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: publishedExams.length,
+      data: publishedExams,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET PUBLISHED EXAM BY ID
+========================= */
+export const getPublishedExamById = async (req, res) => {
+  try {
+    const publishedExam = await PublishedExam.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id   // ✅ Prevent access to others
+    });
+
+    if (!publishedExam) {
+      return res.status(404).json({
+        success: false,
+        message: "Published exam not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: publishedExam,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+/* =========================
+   DELETE EXAM (TEACHER)
+========================= */
+export const deleteExam = async (req, res) => {
+  try {
+    const exam = await Exam.findById(req.params.examId);
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: "Exam not found",
+      });
+    }
+
+    // Only owner can delete
+    if (exam.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You do not own this exam",
+      });
+    }
+
+    // 🔥 If exam was published → remove published record
+    if (exam.status === "PUBLISHED") {
+      const publishedExam = await PublishedExam.findOne({
+        examId: exam._id,
+      });
+
+      if (publishedExam) {
+        // Optional: delete PDF file from server
+        if (publishedExam.pdfPath) {
+          const filePath = path.join(process.cwd(), publishedExam.pdfPath);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+
+        await publishedExam.deleteOne();
+      }
+    }
+
+    // Delete related questions
+    await Question.deleteMany({ examId: exam._id });
+
+    // Delete exam itself
+    await exam.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam deleted successfully (including published data if existed)",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
