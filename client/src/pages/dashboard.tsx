@@ -14,13 +14,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { generateExamPDF } from "../lib/pdf-generator";
 import { toast } from "sonner";
+import { apiRequest } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-
+  const [loading, setLoading] = useState(true);
   type Exam = {
-    id: number;
+    _id: string;
+    id?: number;
     title: string;
     subject: string;
     date: string;
@@ -32,23 +35,68 @@ export default function Dashboard() {
 
   const [exams, setExams] = useState<Exam[]>([]);
 
+  // const [exams, setExams] = useState<Exam[]>([]);
+
+  // useEffect(() => {
+  //   const published = JSON.parse(localStorage.getItem("published_exams") || "[]");
+  //   setExams(published);
+  // }, []);
+
+  // 🔥 FETCH EXAMS FROM BACKEND
+  const fetchExams = async () => {
+    try {
+      setLoading(true);
+
+      const res = await apiRequest("GET", "/api/exams");
+      const data = await res.json();
+
+      if (data.success) {
+        setExams(data.data);   // Backend exams
+      } else {
+        toast.error("Failed to load exams");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error fetching exams");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const published = JSON.parse(localStorage.getItem("published_exams") || "[]");
-    setExams(published);
+    fetchExams();
   }, []);
 
   const handleDownloadPDF = (e: React.MouseEvent, exam: Exam) => {
     e.stopPropagation();
     generateExamPDF(exam);
   };
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/exams/${id}`);
+      const data = await res.json();
 
-  const handleDeleteExam = (e: React.MouseEvent, examId: number) => {
-    e.stopPropagation();
-    const updatedExams = exams.filter(e => e.id !== examId);
-    setExams(updatedExams);
-    localStorage.setItem("published_exams", JSON.stringify(updatedExams));
-    toast.success("Exam deleted successfully");
-  };
+      if (!data.success) {
+        throw new Error(data.message || "Delete failed");
+      }
+
+      return data;
+    },
+
+    onSuccess: () => {
+      toast.success("Exam deleted successfully");
+      fetchExams();
+    },
+
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete exam";
+
+      toast.error(message);
+    },
+  });
+
+  if (loading) return <div>Loading exams...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col font-inter">
@@ -125,7 +173,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {exams.map((exam) => (
-              <Card key={exam.id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white overflow-hidden relative" data-testid={`card-exam-${exam.id}`}>
+              <Card key={exam._id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white overflow-hidden relative" data-testid={`card-exam-${exam.id}`}>
                 <CardHeader className="pb-3 px-6 pt-6">
                   <div className="flex justify-between items-start mb-4">
                     <Badge variant="secondary" className={`rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider border-0 ${exam.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -149,7 +197,7 @@ export default function Dashboard() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="flex items-center gap-2 px-3 py-2 cursor-pointer rounded-lg text-rose-600 hover:bg-rose-50 transition-colors focus:bg-rose-50 focus:text-rose-700"
-                          onClick={(e) => handleDeleteExam(e, exam.id)}
+                          onClick={() => deleteMutation.mutate(exam._id)}
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="font-medium">Delete Exam</span>

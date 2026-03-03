@@ -104,70 +104,46 @@ export default function QuestionsListPage() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
-      // Filter only approved questions
-      const approvedQuestions = examData.questions.filter((q: any) => q.isLocked);
+      const approvedQuestions = examData.questions.filter(
+        (q: { isLocked: any; }) => q.isLocked
+      );
 
       if (approvedQuestions.length === 0) {
-        throw new Error("No approved questions to publish. Please approve at least one question.");
+        throw new Error("Approve at least one question before publishing");
       }
 
       const payload = {
         examDetails: {
           title: examData.title,
           subject: examData.subject,
-          subjects: [examData.subject], // Backend controller uses .subjects
-          topics: [examData.topics],   // Backend controller uses .topics
+          subjects: [examData.subject],
+          topics: [examData.topics],
           timeLimit: examData.timeLimit,
           difficulty: examData.difficulty,
           description: examData.description
         },
-        questions: approvedQuestions.map((q: any) => ({
-          text: q.text,
-          marks: q.marks,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          answer: q.answer,
-          type: q.type,
-          difficulty: q.difficulty
-        }))
+        questions: approvedQuestions
       };
 
       const res = await apiRequest("POST", "/api/exams/import-static", payload);
       const data = await res.json();
 
       if (!data.success) {
-        throw new Error(data.message || "Failed to publish exam");
+        throw new Error(data.message || "Failed to publish");
       }
-
-      // Keep localStorage for backward compatibility/local preview
-      const publishedExam = {
-        id: data.data?.examId || Date.now(),
-        title: examData.title,
-        subject: examData.subject,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        questions: approvedQuestions.length,
-        questionData: approvedQuestions,
-        timeLimit: examData.timeLimit,
-        topics: examData.topics,
-        status: "Published",
-        statusColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
-      };
-
-      const existingExams = JSON.parse(localStorage.getItem("published_exams") || "[]");
-      localStorage.setItem("published_exams", JSON.stringify([publishedExam, ...existingExams]));
 
       return data;
     },
+
     onSuccess: () => {
-      setPublishStatus("Published");
       toast.success("Exam published successfully!");
-      // Redirect to dashboard after a short delay to let toast be seen
       setTimeout(() => {
         setLocation("/dashboard");
-      }, 1500);
+      }, 1000);
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to publish exam");
+
+    onError: (error) => {
+      toast.error(error.message || "Publish failed");
     }
   });
 
