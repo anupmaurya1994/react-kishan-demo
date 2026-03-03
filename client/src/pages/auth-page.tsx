@@ -43,8 +43,6 @@ export default function AuthPage() {
     message?: string;
   }
 
-  // user and storedUser state is now managed by AuthProvider
-
   const validateEmail = (email: string) => {
     if (!email) return "Email is required";
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -234,7 +232,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://192.168.1.7:5000/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -299,7 +297,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://192.168.1.13:5000/api/auth/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

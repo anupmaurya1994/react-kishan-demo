@@ -5,6 +5,7 @@ import { ChevronLeft, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { QuestionsList } from "@/components/QuestionsList";
 import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Sheet,
   SheetContent,
@@ -110,23 +111,52 @@ export default function QuestionsListPage() {
         throw new Error("No approved questions to publish. Please approve at least one question.");
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const payload = {
+        examDetails: {
+          title: examData.title,
+          subject: examData.subject,
+          subjects: [examData.subject], // Backend controller uses .subjects
+          topics: [examData.topics],   // Backend controller uses .topics
+          timeLimit: examData.timeLimit,
+          difficulty: examData.difficulty,
+          description: examData.description
+        },
+        questions: approvedQuestions.map((q: any) => ({
+          text: q.text,
+          marks: q.marks,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          answer: q.answer,
+          type: q.type,
+          difficulty: q.difficulty
+        }))
+      };
 
+      const res = await apiRequest("POST", "/api/exams/import-static", payload);
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to publish exam");
+      }
+
+      // Keep localStorage for backward compatibility/local preview
       const publishedExam = {
-        id: Date.now(), // Generate a unique ID
+        id: data.data?.examId || Date.now(),
         title: examData.title,
         subject: examData.subject,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         questions: approvedQuestions.length,
+        questionData: approvedQuestions,
+        timeLimit: examData.timeLimit,
+        topics: examData.topics,
         status: "Published",
         statusColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
       };
 
-      // Get existing published exams from localStorage
       const existingExams = JSON.parse(localStorage.getItem("published_exams") || "[]");
       localStorage.setItem("published_exams", JSON.stringify([publishedExam, ...existingExams]));
 
-      return { success: true };
+      return data;
     },
     onSuccess: () => {
       setPublishStatus("Published");

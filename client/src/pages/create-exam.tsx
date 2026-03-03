@@ -181,16 +181,16 @@ export default function CreateExam() {
     },
   });
 
-  const publishMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
-    },
-    onSuccess: () => {
-      setPublishStatus("Published");
-      toast.success("Exam published successfully!");
-    },
-  });
+  // const publishMutation = useMutation({
+  //   mutationFn: async () => {
+  //     await new Promise(resolve => setTimeout(resolve, 1000));
+  //     return { success: true };
+  //   },
+  //   onSuccess: () => {
+  //     setPublishStatus("Published");
+  //     toast.success("Exam published successfully!");
+  //   },
+  // });
 
   const handleGenerate = (values: ExamFormValues) => {
     setStatus("Processing");
@@ -226,26 +226,6 @@ export default function CreateExam() {
     <>
       <AppHeader />
       <div className="min-h-screen bg-slate-50/50 flex flex-col">
-
-        {/* <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} className="rounded-full">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 p-1.5 rounded-lg">
-                  <BrainCircuit className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-xl font-bold tracking-tight text-slate-900">ExamAI</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">{status}</Badge>
-              <Badge variant="outline" className={`${publishStatus === 'Published' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{publishStatus}</Badge>
-            </div>
-          </div>
-        </header> */}
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <form onSubmit={handleSubmit(handleGenerate)} className="grid grid-cols-1 lg:grid-cols-12 gap-8">

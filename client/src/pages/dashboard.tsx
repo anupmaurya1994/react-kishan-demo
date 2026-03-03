@@ -1,11 +1,19 @@
 import { Link, useLocation } from "wouter";
+import { useEffect, useState } from "react";
 import AppHeader from "./AppHeader";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Clock, FileUp, Sparkles, CheckCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus, FileText, Clock, FileUp, Sparkles, CheckCircle2, MoreVertical, Download, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { generateExamPDF } from "../lib/pdf-generator";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -18,6 +26,8 @@ export default function Dashboard() {
     date: string;
     questions: number;
     status: string;
+    questionData?: any[];
+    timeLimit?: number;
   };
 
   const [exams, setExams] = useState<Exam[]>([]);
@@ -26,6 +36,19 @@ export default function Dashboard() {
     const published = JSON.parse(localStorage.getItem("published_exams") || "[]");
     setExams(published);
   }, []);
+
+  const handleDownloadPDF = (e: React.MouseEvent, exam: Exam) => {
+    e.stopPropagation();
+    generateExamPDF(exam);
+  };
+
+  const handleDeleteExam = (e: React.MouseEvent, examId: number) => {
+    e.stopPropagation();
+    const updatedExams = exams.filter(e => e.id !== examId);
+    setExams(updatedExams);
+    localStorage.setItem("published_exams", JSON.stringify(updatedExams));
+    toast.success("Exam deleted successfully");
+  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col font-inter">
@@ -102,12 +125,37 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {exams.map((exam) => (
-              <Card key={exam.id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white" data-testid={`card-exam-${exam.id}`}>
+              <Card key={exam.id} className="border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white overflow-hidden relative" data-testid={`card-exam-${exam.id}`}>
                 <CardHeader className="pb-3 px-6 pt-6">
                   <div className="flex justify-between items-start mb-4">
                     <Badge variant="secondary" className={`rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider border-0 ${exam.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {exam.status}
                     </Badge>
+
+                    {/* Three-dot menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus-visible:ring-0">
+                          <MoreVertical className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border-slate-200 shadow-xl p-1 w-48">
+                        <DropdownMenuItem
+                          className="flex items-center gap-2 px-3 py-2 cursor-pointer rounded-lg text-slate-600 hover:text-primary transition-colors focus:bg-primary/5 focus:text-primary"
+                          onClick={(e) => handleDownloadPDF(e, exam)}
+                        >
+                          <Download className="h-4 w-4" />
+                          <span className="font-medium">Download as PDF</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="flex items-center gap-2 px-3 py-2 cursor-pointer rounded-lg text-rose-600 hover:bg-rose-50 transition-colors focus:bg-rose-50 focus:text-rose-700"
+                          onClick={(e) => handleDeleteExam(e, exam.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="font-medium">Delete Exam</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <CardTitle className="text-2xl font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors mb-1">{exam.title}</CardTitle>
                   <CardDescription className="text-base font-semibold text-blue-500/80">{exam.subject}</CardDescription>
