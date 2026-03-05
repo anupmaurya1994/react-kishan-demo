@@ -45,7 +45,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://192.168.1.3:5000',
+        target: 'http://192.168.1.6:5000',
         changeOrigin: true,
       },
     },

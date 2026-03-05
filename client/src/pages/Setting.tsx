@@ -79,7 +79,7 @@ export default function Setting() {
 
         try {
             const token = localStorage.getItem("token");
-            const response = await fetch("http://192.168.1.3:5000/api/auth/edit-profile", {
+            const response = await fetch("http://192.168.1.6:5000/api/auth/edit-profile", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -170,7 +170,7 @@ export default function Setting() {
 
         try {
             const token = localStorage.getItem("token");
-            const response = await fetch("http://192.168.1.3:5000/api/auth/edit-profile", {
+            const response = await fetch("http://192.168.1.6:5000/api/auth/edit-profile", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

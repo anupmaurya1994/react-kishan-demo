@@ -5,29 +5,35 @@ export function generateExamPDF(exam: any) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Safe Fallbacks
+    const title = exam.title || "Exam Document";
+    const subject = exam.subject || (exam.subjects && Array.isArray(exam.subjects) ? exam.subjects.join(", ") : "") || "Subject";
+    const dateStr = exam.date || (exam.createdAt ? new Date(exam.createdAt).toLocaleDateString() : "N/A");
+    const qCount = exam.questionsCount ?? (Array.isArray(exam.questions) ? exam.questions.length : Array.isArray(exam.questionData) ? exam.questionData.length : typeof exam.questions === 'number' ? exam.questions : 0);
+
     // Header
     doc.setFontSize(22);
     doc.setTextColor(33, 33, 33);
-    doc.text(exam.title, pageWidth / 2, 20, { align: "center" });
+    doc.text(title, pageWidth / 2, 20, { align: "center" });
 
     doc.setFontSize(14);
     doc.setTextColor(100, 100, 100);
-    doc.text(exam.subject, pageWidth / 2, 30, { align: "center" });
+    doc.text(subject, pageWidth / 2, 30, { align: "center" });
 
     // Metadata Line
     doc.setDrawColor(200, 200, 200);
     doc.line(20, 35, pageWidth - 20, 35);
 
     doc.setFontSize(10);
-    doc.text(`Date: ${exam.date}`, 20, 42);
+    doc.text(`Date: ${dateStr}`, 20, 42);
     doc.text(`Time Limit: ${exam.timeLimit || "N/A"} mins`, pageWidth / 2, 42, { align: "center" });
-    doc.text(`Questions: ${exam.questions}`, pageWidth - 20, 42, { align: "right" });
+    doc.text(`Questions: ${qCount}`, pageWidth - 20, 42, { align: "right" });
 
     doc.line(20, 47, pageWidth - 20, 47);
 
     // Questions
     let currentY = 60;
-    const questions = exam.questionData || [];
+    const questions = (Array.isArray(exam.questions) ? exam.questions : exam.questionData) || [];
 
     questions.forEach((q: any, index: number) => {
         // Check if we need a new page
@@ -53,7 +59,7 @@ export function generateExamPDF(exam: any) {
         currentY += (splitTitle.length * 7);
 
         // Options for MCQ
-        if (q.type === "MCQ" && q.options) {
+        if (Array.isArray(q.options) && q.options.length > 0) {
             q.options.forEach((opt: string, optIndex: number) => {
                 const letter = String.fromCharCode(65 + optIndex); // A, B, C, D
                 doc.setTextColor(60, 60, 60);

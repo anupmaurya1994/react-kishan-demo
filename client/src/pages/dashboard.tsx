@@ -26,8 +26,10 @@ export default function Dashboard() {
     id?: number;
     title: string;
     subject: string;
-    date: string;
-    questions: number;
+    date?: string;
+    questions?: number;
+    questionsCount?: number;
+    createdAt?: string;
     status: string;
     questionData?: any[];
     timeLimit?: number;
@@ -67,9 +69,21 @@ export default function Dashboard() {
     fetchExams();
   }, []);
 
-  const handleDownloadPDF = (e: React.MouseEvent, exam: Exam) => {
+  const handleDownloadPDF = async (e: React.MouseEvent, exam: Exam) => {
     e.stopPropagation();
-    generateExamPDF(exam);
+    try {
+      const res = await apiRequest("GET", `/api/exams/${exam._id}/questions`);
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        generateExamPDF({ ...exam, questions: data.data });
+      } else {
+        generateExamPDF(exam);
+      }
+    } catch (error) {
+      console.error("Error fetching questions for PDF:", error);
+      generateExamPDF(exam);
+    }
   };
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -212,11 +226,11 @@ export default function Dashboard() {
                   <div className="flex items-center gap-4 text-sm text-slate-400 font-medium">
                     <div className="flex items-center gap-1.5">
                       <FileText className="h-4 w-4" />
-                      <span>{exam.questions} Questions</span>
+                      <span>{exam.questionsCount ?? (Array.isArray(exam.questions) ? exam.questions.length : Array.isArray(exam.questionData) ? exam.questionData.length : typeof exam.questions === 'number' ? exam.questions : 0)} Questions</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-4 w-4" />
-                      <span>{exam.date}</span>
+                      <span>{exam.date || (exam.createdAt ? new Date(exam.createdAt).toLocaleDateString() : '')}</span>
                     </div>
                   </div>
                 </CardContent>
