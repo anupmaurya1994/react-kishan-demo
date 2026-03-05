@@ -11,6 +11,14 @@ export function generateExamPDF(exam: any) {
     const dateStr = exam.date || (exam.createdAt ? new Date(exam.createdAt).toLocaleDateString() : "N/A");
     const qCount = exam.questionsCount ?? (Array.isArray(exam.questions) ? exam.questions.length : Array.isArray(exam.questionData) ? exam.questionData.length : typeof exam.questions === 'number' ? exam.questions : 0);
 
+    // Get time limit dynamically
+    const timeLimit =
+        exam?.timeLimit ??
+        exam?.examDetails?.timeLimit ??
+        exam?.details?.timeLimit ??
+        exam?.duration ??
+        "N/A";
+
     // Header
     doc.setFontSize(22);
     doc.setTextColor(33, 33, 33);
@@ -26,7 +34,8 @@ export function generateExamPDF(exam: any) {
 
     doc.setFontSize(10);
     doc.text(`Date: ${dateStr}`, 20, 42);
-    doc.text(`Time Limit: ${exam.timeLimit || "N/A"} mins`, pageWidth / 2, 42, { align: "center" });
+    // doc.text(`Time Limit: ${exam.timeLimit || "N/A"} mins`, pageWidth / 2, 42, { align: "center" });
+    doc.text(`Time Limit: ${timeLimit} mins`, pageWidth / 2, 42, { align: "center" });
     doc.text(`Questions: ${qCount}`, pageWidth - 20, 42, { align: "right" });
 
     doc.line(20, 47, pageWidth - 20, 47);

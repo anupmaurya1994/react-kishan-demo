@@ -44,7 +44,8 @@ export default function Dashboard() {
   //   setExams(published);
   // }, []);
 
-  // 🔥 FETCH EXAMS FROM BACKEND
+  // FETCH EXAMS FROM BACKEND
+
   const fetchExams = async () => {
     try {
       setLoading(true);
@@ -69,22 +70,53 @@ export default function Dashboard() {
     fetchExams();
   }, []);
 
+  // const handleDownloadPDF = async (e: React.MouseEvent, exam: Exam) => 
+  // { e.stopPropagation(); 
+  // try { const res = await apiRequest("GET", /api/exams/${exam._id}/questions);
+  //  const data = await res.json(); 
+  // if (data.success && data.data) { 
+  // generateExamPDF({ ...exam, questions: data.data }); } 
+  // else { generateExamPDF(exam); } } 
+  // catch (error) { console.error("Error fetching questions for PDF:", error); generateExamPDF(exam); } };
+
   const handleDownloadPDF = async (e: React.MouseEvent, exam: Exam) => {
     e.stopPropagation();
+
     try {
+      // get stored exam data (timeLimit + questions)
+      const storedExam = sessionStorage.getItem("current_exam_data");
+      const parsedExam = storedExam ? JSON.parse(storedExam) : null;
+
+      // fetch questions from API
       const res = await apiRequest("GET", `/api/exams/${exam._id}/questions`);
       const data = await res.json();
 
-      if (data.success && data.data) {
-        generateExamPDF({ ...exam, questions: data.data });
-      } else {
-        generateExamPDF(exam);
-      }
+      const examForPDF: any = {
+        ...exam,
+        timeLimit: parsedExam?.timeLimit,
+        questions:
+          data?.success && data?.data
+            ? data.data
+            : parsedExam?.questions || [],
+      };
+
+      generateExamPDF(examForPDF);
     } catch (error) {
-      console.error("Error fetching questions for PDF:", error);
-      generateExamPDF(exam);
+      console.error("Error fetching questions:", error);
+
+      const storedExam = sessionStorage.getItem("current_exam_data");
+      const parsedExam = storedExam ? JSON.parse(storedExam) : null;
+
+      const examForPDF: any = {
+        ...exam,
+        timeLimit: parsedExam?.timeLimit,
+        questions: parsedExam?.questions || [],
+      };
+
+      generateExamPDF(examForPDF);
     }
   };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiRequest("DELETE", `/api/exams/${id}`);
