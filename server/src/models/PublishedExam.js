@@ -24,13 +24,23 @@ const publishedExamSchema = new mongoose.Schema(
     topics: [String],
 
     questions: [
+
       {
+
         questionId: mongoose.Schema.Types.ObjectId,
+
         text: String,
+
         options: [String],
+
+        correctAnswer: Number,
+
         marks: Number
+
       }
+
     ],
+
 
     totalMarks: Number,
     pdfPath: String,

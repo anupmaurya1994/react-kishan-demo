@@ -104,7 +104,8 @@ Requirements:
 - Difficulty: ${difficulty}
 - Language: ${language}
 - Number of questions: ${count}
-- Focus Topics: ${req.body?.topics?.join(", ") || "General contents from provided text"}
+- Focus Topics: ${subjects.join(", ") || "General contents from provided text"}
+ 
 
 JSON FORMAT (STRICT):
 [

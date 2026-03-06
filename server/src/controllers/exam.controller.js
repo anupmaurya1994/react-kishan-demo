@@ -108,7 +108,18 @@ export const addManualQuestion = async (req, res) => {
 ========================= */
 export const getQuestions = async (req, res) => {
   try {
-    const exam = await Exam.findById(req.params.examId);
+    const { examId } = req.params;
+
+    // ✅ Prevent MongoDB crash
+    if (!mongoose.Types.ObjectId.isValid(examId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid exam ID",
+      });
+    }
+
+    const exam = await Exam.findById(examId);
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -119,20 +130,20 @@ export const getQuestions = async (req, res) => {
     if (exam.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Unauthorized: You do not own this exam",
+        message: "Unauthorized",
       });
     }
 
-    const questions = await Question.find({
-      examId: req.params.examId,
-    });
+    const questions = await Question.find({ examId });
 
     return res.status(200).json({
       success: true,
       total: questions.length,
       data: questions,
     });
+
   } catch (error) {
+    console.error("Get Questions Error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -573,11 +584,17 @@ export const publishExam = async (req, res) => {
         message: "Exam is already published",
       });
     }
-
-    const approvedQuestions = await Question.find({
+    const lockedQuestions = await Question.find({
       examId: exam._id,
-      isApproved: true,
-    });
+      isApproved: true
+    }).lean();
+
+    if (!lockedQuestions.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No approved questions. Cannot publish exam.",
+      });
+    }
 
     if (!approvedQuestions.length) {
       return res.status(400).json({
@@ -586,7 +603,7 @@ export const publishExam = async (req, res) => {
       });
     }
 
-    const totalMarks = approvedQuestions.reduce(
+    const totalMarks = lockedQuestions.reduce(
       (sum, q) => sum + q.marks,
       0
     );
@@ -615,7 +632,7 @@ export const publishExam = async (req, res) => {
     // Generate PDF
     await generateExamPDF(
       examData,
-      approvedQuestions,
+      lockedQuestions,
       pdfPath
     );
 
@@ -623,12 +640,20 @@ export const publishExam = async (req, res) => {
       examId: exam._id,
       createdBy: req.user._id,   // ✅ ADD THIS
       ...examData,
-      questions: approvedQuestions.map((q) => ({
+      questions: lockedQuestions.map((q) => ({
+
         questionId: q._id,
+
         text: q.text,
+
         options: q.options,
+
+        correctAnswer: q.correctAnswer,
+
         marks: q.marks,
+
       })),
+
       totalMarks,
       pdfPath: `/uploads/exams/${pdfFilename}`,
       publishedAt: new Date(),
@@ -643,7 +668,7 @@ export const publishExam = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Exam published and PDF generated successfully",
-      totalQuestions: approvedQuestions.length,
+      totalQuestions: lockedQuestions.length,
       totalMarks,
       pdfUrl,
     });
