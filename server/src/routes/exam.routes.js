@@ -9,13 +9,14 @@ import {
   bulkApproveQuestions,
   publishExam,
   regenerateAIQuestions,
-  getExamStatus,  
+  getExamStatus,
   importStaticExam,
   getAllExams,
   getPublishedExams,
   getPublishedExamById,
   generateAIQuestions,
-  deleteExam
+  deleteExam,
+  getExamById
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -33,6 +34,9 @@ router.get("/published/:id", protect, getPublishedExamById);
 
 // GET ALL EXAMS (Teacher only)
 router.get("/", protect, getAllExams);
+
+// GET EXAM BY ID (Teacher only)
+router.get("/:id", protect, getExamById);
 
 
 // CREATE EXAM (Teacher only)

@@ -9,16 +9,19 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
+  const allowedMimetypes = [
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
+  const allowedExtensions = [".pdf", ".doc", ".docx"];
+  const extension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf("."));
+
+  if (allowedMimetypes.includes(file.mimetype) || allowedExtensions.includes(extension)) {
     cb(null, true);
   } else {
-    cb(new Error("Only PDF, DOC, DOCX files allowed"));
+    cb(new Error(`Only PDF, DOC, DOCX files allowed. Received: ${file.mimetype} with extension ${extension}`));
   }
 };
 

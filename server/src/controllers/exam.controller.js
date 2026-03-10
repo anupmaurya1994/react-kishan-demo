@@ -18,18 +18,27 @@ export const createExam = async (req, res) => {
 
     if (req.files?.length) {
       for (const file of req.files) {
-        const text = await extractTextFromFile(file);
-        filesData.push({
-          originalName: file.originalname,
-          extractedText: text,
-        });
+        try {
+          const text = await extractTextFromFile(file);
+          filesData.push({
+            originalName: file.originalname,
+            extractedText: text || "Extraction empty",
+          });
+        } catch (err) {
+          console.error(`Extraction failed for ${file.originalname}:`, err);
+          filesData.push({
+            originalName: file.originalname,
+            extractedText: "Text extraction failed, using static flow fallback.",
+          });
+        }
       }
     }
 
     const exam = await Exam.create({
       ...req.body,
-      subjects: JSON.parse(req.body.subjects || "[]"),
-      topics: JSON.parse(req.body.topics || "[]"),
+      duration: req.body.timeLimit || req.body.duration,
+      subjects: typeof req.body.subjects === 'string' ? JSON.parse(req.body.subjects || "[]") : req.body.subjects,
+      topics: typeof req.body.topics === 'string' ? JSON.parse(req.body.topics || "[]") : req.body.topics,
       files: filesData,
       createdBy: req.user._id,
     });
@@ -494,6 +503,11 @@ export const regenerateAIQuestions = async (req, res) => {
       });
     }
 
+    // Set status to PROCESSING immediately to notify UI
+    exam.status = "PROCESSING";
+    exam.processingMessage = "Deleting old questions and preparing for regeneration...";
+    await exam.save();
+
     await Question.deleteMany({
       examId: req.params.examId,
       source: "AI",
@@ -592,14 +606,7 @@ export const publishExam = async (req, res) => {
     if (!lockedQuestions.length) {
       return res.status(400).json({
         success: false,
-        message: "No approved questions. Cannot publish exam.",
-      });
-    }
-
-    if (!approvedQuestions.length) {
-      return res.status(400).json({
-        success: false,
-        message: "No approved questions. Cannot publish exam.",
+        message: "No approved (locked) questions. Please approve at least one question before publishing.",
       });
     }
 
@@ -848,6 +855,40 @@ export const deleteExam = async (req, res) => {
       message: "Exam deleted successfully (including published data if existed)",
     });
 
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET EXAM BY ID (TEACHER)
+========================= */
+export const getExamById = async (req, res) => {
+  try {
+    const exam = await Exam.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id
+    });
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: "Exam not found",
+      });
+    }
+
+    const questionsCount = await Question.countDocuments({ examId: exam._id });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...exam._doc,
+        questionsCount
+      },
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,

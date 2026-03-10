@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import examRoutes from "./routes/exam.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import directoryRoutes from "./routes/directory.routes.js";
 
 const app = express();
 
@@ -14,5 +15,6 @@ app.use("/uploads", express.static("uploads"));
 
 app.use("/api/exams", examRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/directory", directoryRoutes);
 
 export default app;
