@@ -32,6 +32,21 @@ export const getRootFolders = async (req, res) => {
     }
 };
 
+// GET ALL FOLDERS (for sidebar tree)
+export const getAllFolders = async (req, res) => {
+    try {
+        const folders = await Folder.find({
+            createdBy: req.user._id,
+            isActive: true,
+        }).sort({ name: 1 });
+
+        res.json({ success: true, data: folders });
+    } catch (error) {
+        console.error("getAllFolders error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // GET FOLDER CONTENTS (sub-folders + files)
 export const getFolderContents = async (req, res) => {
     try {
@@ -221,6 +236,32 @@ export const deleteFile = async (req, res) => {
         res.json({ success: true, message: "File deleted successfully" });
     } catch (error) {
         console.error("deleteFile error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET FILE CONTENT (Secure serving)
+export const getFileContent = async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const file = await DirectoryFile.findOne({
+            _id: fileId,
+            createdBy: req.user._id,
+            isActive: true,
+        });
+
+        if (!file) {
+            return res.status(404).json({ success: false, message: "File not found" });
+        }
+
+        const absolutePath = path.resolve(file.filePath);
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ success: false, message: "Physical file not found" });
+        }
+
+        res.sendFile(absolutePath);
+    } catch (error) {
+        console.error("getFileContent error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

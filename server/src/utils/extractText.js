@@ -3,7 +3,11 @@ import mammoth from "mammoth";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+let pdfParse = require("pdf-parse");
+if (typeof pdfParse !== "function" && pdfParse.default) {
+  pdfParse = pdfParse.default;
+}
+
 
 export const extractTextFromFile = async (file) => {
   const buffer = fs.readFileSync(file.path);
@@ -18,7 +22,7 @@ export const extractTextFromFile = async (file) => {
   if (
     file.mimetype === "application/msword" ||
     file.mimetype ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
     const result = await mammoth.extractRawText({ buffer });
     return result.value || "";

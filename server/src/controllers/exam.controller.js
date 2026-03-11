@@ -442,7 +442,7 @@ export const generateAIQuestions = async (req, res) => {
       });
     }
 
-    if (exam.status === "PROCESSING") {
+    if (exam.status === "PROCESSING" && !req._isRegenerating) {
       return res.status(400).json({
         success: false,
         message: "Exam is already being processed.",
@@ -513,6 +513,7 @@ export const regenerateAIQuestions = async (req, res) => {
       source: "AI",
     });
 
+    req._isRegenerating = true;
     return generateAIQuestions(req, res);
   } catch (error) {
     return res.status(500).json({
@@ -731,7 +732,7 @@ export const getAllExams = async (req, res) => {
 
     // For each exam, count number of questions
     const examsWithCount = await Promise.all(exams.map(async (exam) => {
-      const questionsCount = await Question.countDocuments({ examId: exam._id });
+      const questionsCount = await Question.countDocuments({ examId: exam._id, isApproved: true });
       return {
         ...exam._doc,
         questionsCount

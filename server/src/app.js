@@ -7,11 +7,10 @@ import directoryRoutes from "./routes/directory.routes.js";
 const app = express();
 
 app.use(cors({
-    origin: "http://localhost:5000", // Adjust this to your frontend URL
+    origin: process.env.CLIENT_URL || "http://localhost:5000",
     credentials: true,
 }));
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
 
 app.use("/api/exams", examRoutes);
 app.use("/api/auth", authRoutes);

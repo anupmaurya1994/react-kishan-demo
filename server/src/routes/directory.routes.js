@@ -7,6 +7,8 @@ import {
     uploadFile,
     deleteFolder,
     deleteFile,
+    getAllFolders,
+    getFileContent,
 } from "../controllers/directory.controller.js";
 import { directoryUpload } from "../middleware/directoryUpload.js";
 import { protect } from "../middleware/auth.js";
@@ -38,5 +40,11 @@ router.delete("/folders/:folderId", protect, deleteFolder);
 
 // DELETE file (soft delete)
 router.delete("/files/:fileId", protect, deleteFile);
+
+// GET all folders (for sidebar tree)
+router.get("/all-folders", protect, getAllFolders);
+
+// GET file content (secure serving)
+router.get("/files/:fileId/content", protect, getFileContent);
 
 export default router;
