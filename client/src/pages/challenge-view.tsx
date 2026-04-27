@@ -51,7 +51,7 @@ export default function ChallengeView() {
     if (isSubmitted) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <Card className="max-w-md w-full text-center p-10 shadow-2xl border-emerald-100 bg-white rounded-3xl animate-in zoom-in-95 duration-500">
+                <Card className="max-w-md w-full text-center p-10 shadow-2xl border-emerald-100 bg-white rounded-3xl">
                     <div className="h-20 w-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <CheckCircle2 className="h-12 w-12 text-emerald-600" />
                     </div>

@@ -2,6 +2,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -13,21 +14,26 @@ import ChallengeView from "@/pages/challenge-view";
 import Setting from "./pages/Setting";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation("/login");
+    if (!isLoading) {
+      if (!user) {
+        setLocation("/login");
+      } else if (user.role === 'teacher' && !user.isProfileComplete) {
+        setLocation("/login");
+      }
     }
   }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner className="size-10 text-primary" />
       </div>
     );
   }
@@ -44,7 +50,11 @@ function Router() {
   // Redirect to dashboard if logged in and trying to access login page
   useEffect(() => {
     if (user && (window.location.pathname === "/" || window.location.pathname === "/login")) {
-      setLocation("/dashboard");
+      if (user.role === 'teacher' && !user.isProfileComplete) {
+        // Stay on auth page so they can complete onboarding
+      } else {
+        setLocation("/dashboard");
+      }
     }
   }, [user, setLocation]);
 
@@ -72,6 +82,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Toaster />
+        <SonnerToaster position="top-right" richColors expand />
         <TooltipProvider>
           <Router />
         </TooltipProvider>

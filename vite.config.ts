@@ -45,7 +45,11 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://192.168.1.6:5000',
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:5002',
         changeOrigin: true,
       },
     },

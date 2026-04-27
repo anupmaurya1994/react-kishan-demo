@@ -508,7 +508,7 @@ export default function ExamLists() {
       <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
         <DialogContent className="max-w-md sm:rounded-3xl p-8 text-center">
           <div className="flex flex-col items-center justify-center space-y-6">
-            <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center animate-in zoom-in duration-300">
+            <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <CheckCircle className="h-10 w-10 text-emerald-500" />
             </div>
             <div className="space-y-2">

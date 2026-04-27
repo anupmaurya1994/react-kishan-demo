@@ -10,13 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { BrainCircuit, ChevronLeft, Upload, Sparkles, Save, Edit2, Trash2, RefreshCw, Eye, Search, Filter, FileText, AlertCircle, Plus, Send } from "lucide-react";
+import { BrainCircuit, ChevronLeft, ChevronRight, Upload, Sparkles, Save, Edit2, Trash2, RefreshCw, Eye, Search, Filter, FileText, AlertCircle, Plus, Send } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AppHeader from "./AppHeader";
+import { Spinner } from "@/components/ui/spinner";
 
 const examSchema = z.object({
   title: z.string().min(1, "Exam title is required"),
@@ -26,6 +27,7 @@ const examSchema = z.object({
   questionCount: z.coerce.number().min(1, "Minimum 1 question required").max(50, "Maximum 50 questions allowed"),
   topics: z.string().min(1, "Important topics are required"),
   timeLimit: z.coerce.number().min(1, "Minimum 1 minute allowed").max(480, "Maximum 480 minutes allowed"),
+  timeLimitType: z.string().min(1, "Time limit type is required"),
 });
 
 type ExamFormValues = z.infer<typeof examSchema>;
@@ -93,91 +95,269 @@ export default function CreateExam() {
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState("Draft");
   const [publishStatus, setPublishStatus] = useState("Pending");
+  const [isPublishedExam, setIsPublishedExam] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<{ originalName: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const {
     register,
     handleSubmit,
     control,
     watch,
+    getValues,
     reset,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ExamFormValues>({
     resolver: zodResolver(examSchema),
     defaultValues: {
+      title: "",
+      subject: "",
+      description: "",
+      questionCount: "" as any,
+      topics: "",
+      timeLimit: "" as any,
       difficulty: "",
+      timeLimitType: "",
     },
   })
 
   useEffect(() => {
+    // Always check the stored exam status on mount (handles all navigation paths)
+    const savedData = sessionStorage.getItem("current_exam_data");
+    if (savedData) {
+      const parsed = JSON.parse(savedData);
+      // Check both current status AND wasPublished flag (set when editing a published exam)
+      if (parsed.status?.toUpperCase() === "PUBLISHED" || parsed.wasPublished === true) {
+        setIsPublishedExam(true);
+      }
+    }
+
     const isEditing = sessionStorage.getItem("isEditingExam");
 
     if (isEditing === "true") {
-      const savedData = sessionStorage.getItem("current_exam_data");
-
       if (savedData) {
         const parsed = JSON.parse(savedData);
 
         reset({
           title: parsed.title || "",
           subject: parsed.subject || "",
-          topics: parsed.topics || "",
+          topics: Array.isArray(parsed.topics) ? parsed.topics.join(", ") : (parsed.topics || ""),
           timeLimit: parsed.timeLimit || 60,
-          difficulty: parsed.difficulty || "medium",
+          timeLimitType: parsed.timeLimitType || "overall",
+          difficulty: parsed.difficulty?.toLowerCase() || "medium",
           description: parsed.description || "",
-          questionCount: parsed.questions?.length || 4,
+          questionCount: parsed.numberOfQuestions || parsed.questions?.length || 4,
         });
+
+        if (parsed.status) {
+          setStatus(parsed.status);
+        }
+
+        // Force Radix Select to remount with the correct value
+        setFormKey(k => k + 1);
+
+        if (parsed.files && parsed.files.length > 0) {
+          setExistingFiles(parsed.files);
+        }
+
+        if (parsed.questions && parsed.questions.length > 0) {
+          setGeneratedQuestions(parsed.questions);
+        }
       }
       sessionStorage.removeItem("isEditingExam");
+    } else {
+      // RESET everything for a truly new exam
+      reset({
+        title: "",
+        subject: "",
+        description: "",
+        questionCount: "" as any,
+        topics: "",
+        timeLimit: "" as any,
+        difficulty: "",
+        timeLimitType: "",
+      });
+      setStatus("Draft");
+      setExistingFiles([]);
+      setGeneratedQuestions([]);
+      setIsPublishedExam(false);
+      setSelectedFiles([]);
     }
   }, [reset]);
 
+  const handleGoToQuestions = () => {
+    const savedStr = sessionStorage.getItem("current_exam_data");
+    const savedData = savedStr ? JSON.parse(savedStr) : null;
+    const id = savedData?._id || "demo-id";
+    setLocation(`/exams/${id}/questions`);
+  };
+
   const mutation = useMutation({
     mutationFn: async (values: ExamFormValues) => {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const savedStr = sessionStorage.getItem("current_exam_data");
+      const savedData = savedStr ? JSON.parse(savedStr) : null;
+      let examId = savedData?._id;
 
-      // Return requested number of questions from mock data
-      const result = [];
-      for (let i = 0; i < values.questionCount; i++) {
-        const mockQ = MOCK_QUESTIONS[i % MOCK_QUESTIONS.length];
-        result.push({
-          ...mockQ,
-          id: (i + 1).toString(),
-          difficulty: values.difficulty || mockQ.difficulty,
-          subject: values.subject
-        });
+      // 1. Update/Create Exam Details and upload files
+      const formData = new FormData();
+      formData.append("title", values.title);
+      formData.append("subject", values.subject);
+      formData.append("topics", JSON.stringify(values.topics.includes('[') ? JSON.parse(values.topics) : values.topics.split(',').map((t: string) => t.trim())));
+      formData.append("timeLimit", values.timeLimit.toString());
+      formData.append("timeLimitType", values.timeLimitType);
+      formData.append("difficulty", values.difficulty);
+      if (values.description) formData.append("description", values.description);
+      formData.append("numberOfQuestions", values.questionCount.toString());
+
+      selectedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const token = localStorage.getItem("token");
+      const saveUrl = examId ? `/api/exams/${examId}` : "/api/exams/create";
+      const saveMethod = examId ? "PUT" : "POST";
+
+      const saveRes = await fetch(saveUrl, {
+        method: saveMethod,
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      const apiSaveData = await saveRes.json();
+      if (!saveRes.ok) {
+        throw new Error(apiSaveData.message || "Failed to save exam details");
       }
-      return result;
+
+      examId = apiSaveData.data?._id || examId;
+
+      // 2. Trigger AI Generation (Regenerate to clear old ones)
+      const genRes = await fetch(`/api/exams/${examId}/regenerate`, {
+        method: "POST",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      const genData = await genRes.json();
+      if (!genRes.ok) {
+        throw new Error(genData.message || "AI generation failed to start");
+      }
+
+      return { examId, values, apiData: apiSaveData.data };
     },
-    onSuccess: (data, values) => {
-      const examData = {
-        questions: data,
-        timeLimit: values.timeLimit,
-        topics: values.topics,
+    onSuccess: ({ examId, values, apiData }) => {
+      const savedStr = sessionStorage.getItem("current_exam_data");
+      const savedData = savedStr ? JSON.parse(savedStr) : null;
+
+      const updatedExamData: any = {
+        ...savedData,
+        ...apiData,
         title: values.title,
         subject: values.subject,
-        difficulty: values.difficulty,      // ✅ ADD THIS
-        description: values.description     // ✅ ADD THIS
+        difficulty: values.difficulty,
+        timeLimit: values.timeLimit,
+        timeLimitType: values.timeLimitType,
+        topics: values.topics,
+        description: values.description,
+        numberOfQuestions: values.questionCount,
+        // Keep only locked/approved questions, clear the rest as they'll be replaced by AI
+        questions: (savedData?.questions || []).filter((q: any) => q.isLocked || q.isApproved),
+        status: "PROCESSING" // AI is now working
       };
-      sessionStorage.setItem("current_exam_data", JSON.stringify(examData));
 
-      setGeneratedQuestions(data);
-      setStatus("Completed");
-      toast.success("Questions generated successfully!");
+      sessionStorage.setItem("current_exam_data", JSON.stringify(updatedExamData));
 
-      // Navigate to the questions list page
+      setGeneratedQuestions([]); // Clear local questions as they are being replaced
+      setStatus("Processing");
+      toast.success("AI Generation started! Redirecting...");
+
+      // Navigate to the questions list page where polling/status can be checked
       setTimeout(() => {
-        setLocation("/exams/demo-id/questions");
-      }, 500);
+        setLocation(`/exams/${examId}/questions`);
+      }, 1000);
     },
     onError: (error: any) => {
       toast.error(error.message);
       setStatus("Draft");
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (values: ExamFormValues) => {
+      const savedStr = sessionStorage.getItem("current_exam_data");
+      const savedData = savedStr ? JSON.parse(savedStr) : null;
+      const examId = savedData?._id;
+
+      const formData = new FormData();
+      formData.append("title", values.title || "Untitled Draft");
+      formData.append("subject", values.subject || "Uncategorized");
+      formData.append("topics", JSON.stringify(values.topics ? values.topics.split(',').map(t => t.trim()) : []));
+      formData.append("timeLimit", (values.timeLimit || 60).toString());
+      formData.append("timeLimitType", values.timeLimitType);
+      formData.append("difficulty", values.difficulty || "");
+      if (values.description) formData.append("description", values.description);
+      formData.append("numberOfQuestions", (values.questionCount || 4).toString());
+
+      const currentStatus = (generatedQuestions && generatedQuestions.length > 0) ? "REVIEW" : "Draft";
+      formData.append("status", currentStatus);
+
+      selectedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const token = localStorage.getItem("token");
+      const url = examId ? `/api/exams/${examId}` : "/api/exams/create";
+      const method = examId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to save draft");
+      }
+      return { apiData: data, examId, values, savedData };
+    },
+    onSuccess: ({ apiData, examId, values, savedData }) => {
+      toast.success("Draft saved successfully!");
+
+      const newFiles = [...existingFiles, ...selectedFiles.map(f => ({ originalName: f.name }))];
+
+      const updatedData = {
+        ...(savedData || {}),
+        title: values.title,
+        subject: values.subject,
+        difficulty: values.difficulty,
+        timeLimit: values.timeLimit,
+        timeLimitType: values.timeLimitType,
+        topics: values.topics,
+        description: values.description,
+        numberOfQuestions: values.questionCount,
+        files: newFiles
+      };
+
+      if (apiData.data && apiData.data._id) {
+        updatedData._id = apiData.data._id;
+      }
+
+      sessionStorage.setItem("current_exam_data", JSON.stringify(updatedData));
+
+      setLocation("/dashboard");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to save draft");
     },
   });
 
@@ -195,6 +375,29 @@ export default function CreateExam() {
   const handleGenerate = (values: ExamFormValues) => {
     setStatus("Processing");
     mutation.mutate(values);
+  };
+
+  const handleSaveDraft = () => {
+    const values = getValues();
+
+    if (!values.title) {
+      toast.error("Please provide an Exam Title before saving a draft.");
+      return;
+    }
+
+    const qCount = Number(values.questionCount);
+    if (!values.questionCount || isNaN(qCount) || qCount < 1) {
+      toast.error("Number of Questions must be at least 1.");
+      return;
+    }
+
+    const tLimit = Number(values.timeLimit);
+    if (!values.timeLimit || isNaN(tLimit) || tLimit < 1) {
+      toast.error("Time Limit must be at least 1 minute.");
+      return;
+    }
+
+    saveDraftMutation.mutate(values);
   };
 
   const handleAddManual = () => {
@@ -216,7 +419,28 @@ export default function CreateExam() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      const allowedExtensions = ["pdf", "docx", "doc", "jpg", "jpeg", "png"];
+
+      const validFiles: File[] = [];
+      const invalidFiles: string[] = [];
+
+      files.forEach(file => {
+        const ext = file.name.split(".").pop()?.toLowerCase();
+        if (ext && allowedExtensions.includes(ext)) {
+          validFiles.push(file);
+        } else {
+          invalidFiles.push(file.name);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        toast.error(`Unsupported files: ${invalidFiles.join(", ")}. Please upload PDF, DOCX, or Images.`);
+      }
+
+      if (validFiles.length > 0) {
+        setSelectedFiles((prev) => [...prev, ...validFiles]);
+      }
     }
   };
 
@@ -228,6 +452,30 @@ export default function CreateExam() {
       <div className="min-h-screen bg-slate-50/50 flex flex-col">
 
         <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-4">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setLocation("/dashboard")}
+              className="text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+
+            {generatedQuestions.length > 0 && (
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={handleGoToQuestions}
+                className="text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors font-semibold"
+              >
+                Continue to Questions
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit(handleGenerate)} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Form Section */}
             <div className={`${showQuestions ? 'lg:col-span-4' : 'lg:col-span-8 lg:col-start-3'} space-y-6 transition-all duration-500`}>
@@ -261,13 +509,13 @@ export default function CreateExam() {
                     <div className="space-y-2">
                       <Label className={errors.difficulty ? "text-destructive" : ""}>Difficulty Level</Label>
                       <Controller
+                        key={formKey}
                         name="difficulty"
                         control={control}
-                        defaultValue=""   // ✅ ADD THIS LINE
                         render={({ field }) => (
                           <Select
-                            value={field.value || ""}  // ✅ important
-                            onValueChange={(value) => field.onChange(value)}  // ✅ important
+                            onValueChange={field.onChange}
+                            value={field.value}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select difficulty" />
@@ -292,26 +540,55 @@ export default function CreateExam() {
                     />
                     {errors.description && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.description.message}</p>}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label className={errors.questionCount ? "text-destructive" : ""}>Number of Questions</Label>
                       <Input
                         type="number"
+                        min="1"
                         {...register("questionCount")}
                         placeholder="20"
+                        onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()}
                         className={`rounded-xl ${errors.questionCount ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
                       {errors.questionCount && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.questionCount.message}</p>}
                     </div>
+
                     <div className="space-y-2">
-                      <Label className={errors.timeLimit ? "text-destructive" : ""}>Time Limit (Minutes)</Label>
+                      <Label className={errors.timeLimit ? "text-destructive" : ""}>Time Limit (Value)</Label>
                       <Input
                         type="number"
+                        min="1"
                         {...register("timeLimit")}
                         placeholder="60"
+                        onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()}
                         className={`rounded-xl ${errors.timeLimit ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
                       {errors.timeLimit && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.timeLimit.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className={errors.timeLimitType ? "text-destructive" : ""}>Time Limit Type</Label>
+                      <Controller
+                        key={formKey}
+                        name="timeLimitType"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <SelectTrigger className={`rounded-xl ${errors.timeLimitType ? "border-destructive focus:ring-destructive" : ""}`}>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="overall">Minutes Total</SelectItem>
+                              <SelectItem value="per-question">Min / Question</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.timeLimitType && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.timeLimitType.message}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -336,15 +613,15 @@ export default function CreateExam() {
                     />
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer group ${selectedFiles.length > 0 ? 'border-primary/50 bg-primary/5' : 'border-slate-200 hover:border-primary/50 hover:bg-primary/5'}`}
+                      className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer group ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'border-primary/50 bg-primary/5' : 'border-slate-200 hover:border-primary/50 hover:bg-primary/5'}`}
                     >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110 ${selectedFiles.length > 0 ? 'bg-primary/20' : 'bg-slate-100'}`}>
-                        <Upload className={`h-6 w-6 ${selectedFiles.length > 0 ? 'text-primary' : 'text-slate-500 group-hover:text-primary'}`} />
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'bg-primary/20' : 'bg-slate-100'}`}>
+                        <Upload className={`h-6 w-6 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'text-primary' : 'text-slate-500 group-hover:text-primary'}`} />
                       </div>
-                      {selectedFiles.length > 0 ? (
+                      {(selectedFiles.length > 0 || existingFiles.length > 0) ? (
                         <div className="space-y-1">
-                          <p className="text-sm font-semibold text-primary">{selectedFiles.length} files selected</p>
-                          <p className="text-xs text-slate-500">{selectedFiles.map(f => f.name).join(", ")}</p>
+                          <p className="text-sm font-semibold text-primary">{selectedFiles.length + existingFiles.length} files attached</p>
+                          <p className="text-xs text-slate-500">{[...existingFiles.map(f => f.originalName), ...selectedFiles.map(f => f.name)].join(", ")}</p>
                         </div>
                       ) : (
                         <>
@@ -356,10 +633,19 @@ export default function CreateExam() {
                   </div>
 
                   <div className="flex gap-3 pt-4">
-                    <Button type="button" variant="outline" className="flex-1 rounded-xl h-11" data-testid="button-save-draft">
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Draft
-                    </Button>
+                    {!isPublishedExam && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 rounded-xl h-11"
+                        data-testid="button-save-draft"
+                        onClick={handleSaveDraft}
+                        disabled={saveDraftMutation.isPending || mutation.isPending}
+                      >
+                        {saveDraftMutation.isPending ? <Spinner className="mr-2 size-4" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save Draft
+                      </Button>
+                    )}
                     <Button
                       type="submit"
                       className="flex-1 rounded-xl h-11 shadow-lg shadow-primary/20"
@@ -368,7 +654,7 @@ export default function CreateExam() {
                     >
                       {isGenerating ? (
                         <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          <Spinner className="mr-2 size-4 text-white" />
                           Generating...
                         </>
                       ) : (

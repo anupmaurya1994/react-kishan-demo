@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BrainCircuit, Settings, LogOut, BookOpenIcon } from "lucide-react";
+import { BrainCircuit, Settings, LogOut } from "lucide-react";
 
 type UserType = {
     name: string;
@@ -42,11 +42,6 @@ export default function AppHeader() {
                     </span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" className="hidden md:flex gap-2 rounded-full border-slate-200">
-                        <BookOpenIcon className="h-4 w-4" />
-                        <span>Documentation</span>
-                    </Button>
-
                     {/* Profile Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -79,6 +74,13 @@ export default function AppHeader() {
                                     <p className="text-xs leading-none text-slate-500">
                                         {user?.email || "guest@example.com"}
                                     </p>
+                                    <div className="pt-1">
+                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                                            user?.role === 'teacher' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                                        }`}>
+                                            {user?.role || 'Guest'}
+                                        </span>
+                                    </div>
                                 </div>
                             </DropdownMenuLabel>
 

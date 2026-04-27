@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import AppHeader from "../pages/AppHeader";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "../hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
 
 export default function Setting() {
     const { user: authUser } = useAuth();
+    const [, setLocation] = useLocation();
     const [activeTab, setActiveTab] = useState("personal");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -222,8 +225,16 @@ export default function Setting() {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
 
                         {/* Header */}
-                        <div className="px-8 pt-8 pb-6">
-                            <h1 className="text-2xl font-semibold text-gray-900">
+                        <div className="px-8 pt-8 pb-6 flex items-center gap-4">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-10 w-10 rounded-full hover:bg-slate-100 transition-all active:scale-95 border border-slate-100"
+                                onClick={() => setLocation("/dashboard")}
+                            >
+                                <ArrowLeft className="h-5 w-5 text-slate-600" />
+                            </Button>
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                                 Account Settings
                             </h1>
                         </div>
