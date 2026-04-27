@@ -37,6 +37,7 @@ export const createExam = async (req, res) => {
     const exam = await Exam.create({
       ...req.body,
       duration: req.body.timeLimit || req.body.duration,
+      timeLimitType: req.body.timeLimitType || "overall",
       subjects: typeof req.body.subjects === 'string' ? JSON.parse(req.body.subjects || "[]") : req.body.subjects,
       topics: typeof req.body.topics === 'string' ? JSON.parse(req.body.topics || "[]") : req.body.topics,
       files: filesData,
@@ -54,6 +55,80 @@ export const createExam = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Exam created successfully",
+      data: exam,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   UPDATE EXAM
+========================= */
+export const updateExam = async (req, res) => {
+  try {
+    const examId = req.params.examId;
+    const exam = await Exam.findById(examId);
+
+    if (!exam) {
+      return res.status(404).json({ success: false, message: "Exam not found" });
+    }
+
+    if (exam.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    const filesData = [...(exam.files || [])];
+
+    // Append new uploaded files
+    if (req.files?.length) {
+      for (const file of req.files) {
+        try {
+          const text = await extractTextFromFile(file);
+          filesData.push({
+            originalName: file.originalname,
+            extractedText: text || "Extraction empty",
+          });
+        } catch (err) {
+          filesData.push({
+            originalName: file.originalname,
+            extractedText: "Text extraction failed.",
+          });
+        }
+      }
+    }
+
+    exam.title = req.body.title || exam.title;
+    exam.description = req.body.description !== undefined ? req.body.description : exam.description;
+    exam.duration = req.body.timeLimit || req.body.duration || exam.duration;
+    exam.timeLimitType = req.body.timeLimitType || exam.timeLimitType;
+    exam.difficulty = req.body.difficulty || exam.difficulty;
+    if (req.body.subject) exam.subject = req.body.subject;
+
+    if (req.body.subjects) exam.subjects = typeof req.body.subjects === 'string' ? JSON.parse(req.body.subjects || "[]") : req.body.subjects;
+    if (req.body.topics) exam.topics = typeof req.body.topics === 'string' ? JSON.parse(req.body.topics || "[]") : req.body.topics;
+
+    if (req.body.numberOfQuestions) {
+      exam.numberOfQuestions = Number(req.body.numberOfQuestions);
+    }
+
+    exam.files = filesData;
+
+    await exam.save();
+
+    for (const fileData of filesData) {
+      await storeTextToVector(fileData.extractedText, {
+        examId: exam._id.toString(),
+        originalName: fileData.originalName,
+      }).catch(e => console.error("Vector store failed on update:", e));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam updated successfully",
       data: exam,
     });
   } catch (error) {
@@ -143,12 +218,25 @@ export const getQuestions = async (req, res) => {
       });
     }
 
-    const questions = await Question.find({ examId });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalItems = await Question.countDocuments({ examId });
+    const questions = await Question.find({ examId })
+      .skip(skip)
+      .limit(limit);
 
     return res.status(200).json({
       success: true,
-      total: questions.length,
+      total: totalItems,
       data: questions,
+      pagination: {
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        pageSize: limit
+      }
     });
 
   } catch (error) {
@@ -225,7 +313,7 @@ export const updateQuestion = async (req, res) => {
       });
     }
 
-    const allowedFields = ["text", "marks", "subject", "difficulty", "options", "correctAnswer"];
+    const allowedFields = ["text", "marks", "subject", "difficulty", "options", "correctAnswer", "isApproved"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         question[field] = req.body[field];
@@ -316,9 +404,11 @@ export const bulkApproveQuestions = async (req, res) => {
       });
     }
 
+    const isApproved = req.body.isApproved !== undefined ? req.body.isApproved : true;
+
     const result = await Question.updateMany(
       { examId: req.params.examId },
-      { $set: { isApproved: true } }
+      { $set: { isApproved } }
     );
 
     return res.status(200).json({
@@ -361,9 +451,24 @@ const processNextInQueue = async () => {
 
     const combinedText = exam.files.map((f) => f.extractedText).join("\n");
 
+    // Count existing approved questions to avoid duplicating them
+    const approvedCount = await Question.countDocuments({ examId, isApproved: true });
+
     // Safety fallback for subjects and question count
     const subjectsToProcess = exam.subjects && exam.subjects.length > 0 ? exam.subjects : ["General"];
     const totalQty = exam.numberOfQuestions && exam.numberOfQuestions > 0 ? exam.numberOfQuestions : 4;
+
+    // Calculate how many more questions we need to reach the totalQty
+    const remainingQty = Math.max(0, totalQty - approvedCount);
+
+    if (remainingQty === 0) {
+      exam.status = "REVIEW";
+      exam.processingMessage = "AI generation complete (Required number of questions already locked).";
+      await exam.save();
+      isProcessing = false;
+      processNextInQueue();
+      return;
+    }
 
     // Process subjects sequentially
     for (let i = 0; i < subjectsToProcess.length; i++) {
@@ -375,7 +480,7 @@ const processNextInQueue = async () => {
         text: combinedText,
         difficulty: exam.difficulty || "Medium",
         subjects: [subject], // Process one subject at a time
-        count: Math.ceil(totalQty / subjectsToProcess.length), // Distribute questions
+        count: Math.ceil(remainingQty / subjectsToProcess.length), // Distribute remaining questions
         language: exam.language || "English",
         topics: exam.topics,
       });
@@ -496,12 +601,7 @@ export const regenerateAIQuestions = async (req, res) => {
       });
     }
 
-    if (exam.status === "PUBLISHED") {
-      return res.status(400).json({
-        success: false,
-        message: "Exam is already published. Regeneration is locked.",
-      });
-    }
+    // Allow regeneration even for published exams (resets to REVIEW after generation)
 
     // Set status to PROCESSING immediately to notify UI
     exam.status = "PROCESSING";
@@ -511,6 +611,7 @@ export const regenerateAIQuestions = async (req, res) => {
     await Question.deleteMany({
       examId: req.params.examId,
       source: "AI",
+      isApproved: false, // Only delete unapproved questions
     });
 
     req._isRegenerating = true;
@@ -537,23 +638,46 @@ export const importStaticExam = async (req, res) => {
       });
     }
 
-    // 1. Create the Exam document
-    const exam = await Exam.create({
-      ...examDetails,
-      subjects: examDetails.subjects || [],
-      topics: examDetails.topics || [],
-      createdBy: req.user._id,
-      status: "REVIEW", // Default to review so teacher can check
-    });
+    // 1. Check if it's an existing draft, otherwise Create the Exam document
+    let exam;
+    if (examDetails._id) {
+      exam = await Exam.findById(examDetails._id);
+    }
+
+    if (exam) {
+      exam.title = examDetails.title || exam.title;
+      exam.subject = examDetails.subject || exam.subject;
+      if (examDetails.subjects) exam.subjects = examDetails.subjects;
+      if (examDetails.topics) exam.topics = examDetails.topics;
+      if (examDetails.difficulty) exam.difficulty = examDetails.difficulty;
+      if (examDetails.timeLimit) exam.duration = examDetails.timeLimit;
+      if (examDetails.timeLimitType) exam.timeLimitType = examDetails.timeLimitType;
+      if (examDetails.description !== undefined) exam.description = examDetails.description;
+      exam.status = examDetails.status || "PUBLISHED";
+      await exam.save();
+      // Clear old manual questions if we are replacing them from the draft
+      await Question.deleteMany({ examId: exam._id });
+    } else {
+      exam = await Exam.create({
+        ...examDetails,
+        subjects: examDetails.subjects || [],
+        topics: examDetails.topics || [],
+        createdBy: req.user._id,
+        status: examDetails.status || "PUBLISHED",
+      });
+    }
 
     // 2. Format and Insert Questions
-    const formattedQuestions = questions.map((q) => ({
-      ...q,
-      examId: exam._id,
-      createdBy: req.user._id,
-      source: "MANUAL",
-      isApproved: true, // Auto-approve static data from frontend
-    }));
+    const formattedQuestions = questions.map((q) => {
+      const { _id, id, ...rest } = q;
+      return {
+        ...rest,
+        examId: exam._id,
+        createdBy: req.user._id,
+        source: "MANUAL",
+        isApproved: true, // Auto-approve static data from frontend
+      };
+    });
 
     const result = await Question.insertMany(formattedQuestions);
 
@@ -593,12 +717,7 @@ export const publishExam = async (req, res) => {
       });
     }
 
-    if (exam.status === "PUBLISHED") {
-      return res.status(400).json({
-        success: false,
-        message: "Exam is already published",
-      });
-    }
+    // Allow re-publishing after regeneration (status will be REVIEW)
     const lockedQuestions = await Question.find({
       examId: exam._id,
       isApproved: true
@@ -630,6 +749,7 @@ export const publishExam = async (req, res) => {
       description: exam.description,
       instructions: exam.instructions,
       duration: exam.duration,
+      timeLimitType: exam.timeLimitType,
       subjects: exam.subjects,
       difficulty: exam.difficulty,
       language: exam.language,
@@ -712,6 +832,7 @@ export const getExamStatus = async (req, res) => {
       success: true,
       data: {
         status: exam.status,
+        timeLimitType: exam.timeLimitType,
         processingMessage: exam.processingMessage,
       },
     });
@@ -889,6 +1010,25 @@ export const getExamById = async (req, res) => {
         ...exam._doc,
         questionsCount
       },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+/* =========================
+   GET ALL PUBLISHED EXAMS (STUDENT)
+========================= */
+export const studentGetAllExams = async (req, res) => {
+  try {
+    const publishedExams = await PublishedExam.find().sort({ publishedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: publishedExams.length,
+      data: publishedExams,
     });
   } catch (error) {
     return res.status(500).json({

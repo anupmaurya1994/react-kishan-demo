@@ -5,6 +5,7 @@ const examSchema = new mongoose.Schema(
     title: String,
     description: String,
     instructions: String,
+    subject: String,
     difficulty: String,
     subjects: [String],
     language: String,
@@ -26,8 +27,13 @@ const examSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["CREATED", "PROCESSING", "REVIEW", "PUBLISHED"],
+      enum: ["CREATED", "PROCESSING", "REVIEW", "PUBLISHED", "Draft", "DRAFT"],
       default: "CREATED"
+    },
+    timeLimitType: {
+      type: String,
+      enum: ["overall", "per-question"],
+      default: "overall"
     },
     processingMessage: {
       type: String,

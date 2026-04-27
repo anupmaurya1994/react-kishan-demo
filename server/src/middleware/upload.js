@@ -12,16 +12,19 @@ const fileFilter = (req, file, cb) => {
   const allowedMimetypes = [
     "application/pdf",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/jpeg",
+    "image/jpg",
+    "image/png"
   ];
 
-  const allowedExtensions = [".pdf", ".doc", ".docx"];
+  const allowedExtensions = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
   const extension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf("."));
 
   if (allowedMimetypes.includes(file.mimetype) || allowedExtensions.includes(extension)) {
     cb(null, true);
   } else {
-    cb(new Error(`Only PDF, DOC, DOCX files allowed. Received: ${file.mimetype} with extension ${extension}`));
+    cb(new Error(`Only PDF, DOC, DOCX, JPG, JPEG, PNG files allowed. Received: ${file.mimetype} with extension ${extension}`));
   }
 };
 

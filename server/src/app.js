@@ -3,8 +3,11 @@ import cors from "cors";
 import examRoutes from "./routes/exam.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import directoryRoutes from "./routes/directory.routes.js";
+import path from "path";
 
 const app = express();
+
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use(cors({
     origin: process.env.CLIENT_URL || "http://localhost:5000",

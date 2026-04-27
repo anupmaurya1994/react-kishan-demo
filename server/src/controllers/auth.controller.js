@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/token.js";
+import { sendOTP } from "../utils/email.js";
+import crypto from "crypto";
 
 /* =========================
    REGISTER
@@ -58,13 +60,13 @@ export const register = async (req, res) => {
 ========================= */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // 1️⃣ Validate input
-    if (!email || !password) {
+    if (!email || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        message: "Email, password, and role are required",
       });
     }
 
@@ -77,12 +79,28 @@ export const login = async (req, res) => {
       });
     }
 
+    // 2.5️⃣ Enforce role
+    if (user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `This account is registered as a ${user.role}, please use the correct login page.`,
+      });
+    }
+
     // 3️⃣ Check if account is locked
     if (user.lockUntil && user.lockUntil > Date.now()) {
       const remainingTime = Math.ceil((user.lockUntil - Date.now()) / (60 * 1000));
       return res.status(403).json({
         success: false,
         message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${remainingTime} minutes.`,
+      });
+    }
+
+    // 3.5 Check if user is verified
+    if (!user.isVerified || !user.password) {
+      return res.status(401).json({
+        success: false,
+        message: "Please complete the OTP verification process first to set up your password.",
       });
     }
 
@@ -124,6 +142,8 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      role: user.role,
+      isProfileComplete: user.isProfileComplete,
     });
 
   } catch (error) {
@@ -226,5 +246,258 @@ export const editProfile = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+/* =========================
+   STUDENT SEND OTP
+========================= */
+export const studentSendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (existingUser.role === 'teacher') {
+        return res.status(400).json({ success: false, message: "This email is registered as a teacher account" });
+      }
+      if (existingUser.isVerified) {
+        return res.status(400).json({ success: false, message: "This email is already registered. Please login." });
+      }
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    if (existingUser) {
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+      await existingUser.save();
+    } else {
+      await User.create({
+        email,
+        role: 'student',
+        otp,
+        otpExpires,
+        isVerified: false
+      });
+    }
+
+    const emailSent = await sendOTP(email, otp, 'student');
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: "Failed to send OTP email. Please check your SMTP settings." });
+    }
+
+    return res.status(200).json({ success: true, message: "OTP sent to your email" });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   STUDENT VERIFY OTP & REGISTER
+========================= */
+export const studentVerifyOTP = async (req, res) => {
+  try {
+    const { email, otp, firstName, lastName, password } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP are required" });
+    }
+
+    const user = await User.findOne({ email, role: 'student' });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+    }
+
+    // OTP is valid
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    user.isVerified = true;
+    user.isProfileComplete = true; // Students don't need additional profile steps
+    
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Student registered and verified successfully",
+      token: generateToken(user),
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   TEACHER SEND OTP
+========================= */
+export const teacherSendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (existingUser.role === 'student') {
+        return res.status(400).json({ success: false, message: "This email is registered as a student account" });
+      }
+      if (existingUser.isVerified) {
+        return res.status(400).json({ success: false, message: "This email is already registered. Please login." });
+      }
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    if (existingUser) {
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+      await existingUser.save();
+    } else {
+      await User.create({
+        email,
+        role: 'teacher',
+        otp,
+        otpExpires,
+        isVerified: false
+      });
+    }
+
+    const emailSent = await sendOTP(email, otp, 'teacher');
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: "Failed to send OTP email. Please check your SMTP settings." });
+    }
+
+    return res.status(200).json({ success: true, message: "OTP sent to your email" });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   TEACHER VERIFY OTP & REGISTER
+========================= */
+export const teacherVerifyOTP = async (req, res) => {
+  try {
+    const { email, otp, firstName, lastName, password } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP are required" });
+    }
+
+    const user = await User.findOne({ email, role: 'teacher' });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+    }
+
+    // OTP is valid
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    user.isVerified = true;
+    
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Teacher registered and verified successfully",
+      token: generateToken(user),
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   COMPLETE TEACHER PROFILE
+========================= */
+export const completeTeacherProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // From auth middleware
+    const { state, city, university, college, subject, profession, additionalInfo } = req.body;
+
+    if (!state || !city || !college || !subject || !profession) {
+      return res.status(400).json({ success: false, message: "State, city, college, subject, and profession are required" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user || user.role !== 'teacher') {
+      return res.status(404).json({ success: false, message: "Teacher account not found" });
+    }
+
+    user.state = state;
+    user.city = city;
+    user.university = university || "";
+    user.college = college;
+    user.subject = subject;
+    user.profession = profession;
+    user.additionalInfo = additionalInfo;
+    user.isProfileComplete = true;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Teacher profile completed successfully",
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isProfileComplete: user.isProfileComplete
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

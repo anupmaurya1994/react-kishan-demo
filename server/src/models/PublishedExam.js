@@ -21,6 +21,11 @@ const publishedExamSchema = new mongoose.Schema(
     subjects: [String],
     language: String,
     duration: Number,
+    timeLimitType: {
+      type: String,
+      enum: ["overall", "per-question"],
+      default: "overall"
+    },
     topics: [String],
 
     questions: [

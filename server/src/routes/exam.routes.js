@@ -14,9 +14,11 @@ import {
   getAllExams,
   getPublishedExams,
   getPublishedExamById,
-  generateAIQuestions,
   deleteExam,
-  getExamById
+  getExamById,
+  updateExam,
+  generateAIQuestions,
+  studentGetAllExams
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -30,6 +32,9 @@ router.get("/published", protect, getPublishedExams);
 
 // GET PUBLISHED EXAM BY ID
 router.get("/published/:id", protect, getPublishedExamById);
+
+// STUDENT: GET ALL PUBLISHED EXAMS
+router.get("/student/all", protect, studentGetAllExams);
 
 
 // GET ALL EXAMS (Teacher only)
@@ -45,6 +50,14 @@ router.post(
   protect,
   upload.array("files", 5),
   createExam
+);
+
+// UPDATE EXAM
+router.put(
+  "/:examId",
+  protect,
+  upload.array("files", 5),
+  updateExam
 );
 
 // IMPORT STATIC EXAM (New)
