@@ -23,6 +23,7 @@
     "mongodb": "^7.1.0",
     "mongoose": "^9.2.2",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "pdf-parse": "^2.4.5",
     "pdfmake": "^0.3.5"

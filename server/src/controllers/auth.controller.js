@@ -139,6 +139,7 @@ export const login = async (req, res) => {
       success: true,
       message: "Login successful",
       token: generateToken(user),
+      id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -341,6 +342,7 @@ export const studentVerifyOTP = async (req, res) => {
       message: "Student registered and verified successfully",
       token: generateToken(user),
       user: {
+        id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
