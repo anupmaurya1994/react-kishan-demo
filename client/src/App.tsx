@@ -7,14 +7,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import ExamsPage from "@/pages/exams";
 import CreateExam from "@/pages/create-exam";
 import QuestionsList from "@/pages/questions-list";
 import ExamLists from "@/pages/exam-lists";
 import ChallengeView from "@/pages/challenge-view";
 import Setting from "./pages/Setting";
+import LeaderboardPage from "./pages/leaderboard";
+import ProfilePage from "./pages/profile";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
+import MainLayout from "./components/MainLayout";
 
 function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
   const { user, isLoading } = useAuth();
@@ -40,7 +44,13 @@ function ProtectedRoute({ path, component: Component }: { path: string; componen
 
   if (!user) return null;
 
-  return <Route path={path} component={Component} />;
+  return (
+    <Route path={path}>
+      <MainLayout>
+        <Component />
+      </MainLayout>
+    </Route>
+  );
 }
 
 function Router() {
@@ -66,11 +76,14 @@ function Router() {
 
       {/* Protected */}
       <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/exams" component={ExamsPage} />
       <ProtectedRoute path="/create-exam" component={CreateExam} />
       <ProtectedRoute path="/exams/:id/questions" component={QuestionsList} />
       <ProtectedRoute path="/api/exams/challenge/:id" component={ChallengeView} />
       <ProtectedRoute path="/exam-lists" component={ExamLists} />
       <ProtectedRoute path="/settings" component={Setting} />
+      <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
+      <ProtectedRoute path="/profile" component={ProfilePage} />
 
       <Route component={NotFound} />
     </Switch>

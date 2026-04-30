@@ -16,7 +16,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import AppHeader from "./AppHeader";
 import { Spinner } from "@/components/ui/spinner";
 
 const examSchema = z.object({
@@ -448,8 +447,7 @@ export default function CreateExam() {
 
   return (
     <>
-      <AppHeader />
-      <div className="min-h-screen bg-slate-50/50 flex flex-col">
+      <div className="bg-slate-50/50 flex flex-col font-inter">
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-4">

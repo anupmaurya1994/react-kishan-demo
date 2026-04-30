@@ -29,19 +29,16 @@ export default function AppHeader() {
         <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
 
-                {/* Logo */}
-                <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={() => setLocation("/dashboard")}
-                >
-                    <div className="bg-primary/10 p-1.5 rounded-lg">
-                        <BrainCircuit className="h-5 w-5 text-primary" />
-                    </div>
-                    <span className="text-xl font-bold tracking-tight text-slate-900">
-                        ExamAI
-                    </span>
-                </div>
-                <div className="flex items-center gap-4">
+                <div />
+                <div className="flex items-center gap-3">
+                    {/* User Info */}
+                    {user && (
+                        <div className="hidden md:flex flex-col items-end gap-0">
+                            <span className="text-sm font-bold text-slate-700 leading-tight">{user.name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.role}</span>
+                        </div>
+                    )}
+
                     {/* Profile Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

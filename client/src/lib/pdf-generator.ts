@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 
 /** Internal: builds all PDF content into the given jsPDF instance */
 function buildExamPDF(doc: jsPDF, exam: any) {
-    const pageWidth  = doc.internal.pageSize.getWidth();   // 210mm
+    const pageWidth = doc.internal.pageSize.getWidth();   // 210mm
     const pageHeight = doc.internal.pageSize.getHeight();  // 297mm
 
     // ── Margins & Layout Constants ───────────────────────────────────────────
@@ -11,35 +11,35 @@ function buildExamPDF(doc: jsPDF, exam: any) {
     const CONTENT_W = pageWidth - ML - MR;   // 170mm usable width
 
     // For the two-column question layout
-    const Q_NUM_X    = ML;                   // question number column start
-    const Q_TEXT_X   = ML + 8;              // question text column start
-    const Q_TEXT_W   = CONTENT_W - 32;      // 138mm — strict max for question text
+    const Q_NUM_X = ML;                   // question number column start
+    const Q_TEXT_X = ML + 8;              // question text column start
+    const Q_TEXT_W = CONTENT_W - 32;      // 138mm — strict max for question text
     const MARKS_EDGE = pageWidth - MR;       // right edge anchor for marks
 
     // ── Colors ───────────────────────────────────────────────────────────────
-    const BLUE = [59, 130, 246] as [number,number,number];
-    const DARK = [30, 41, 59]   as [number,number,number];
-    const GRAY = [100,116,139]  as [number,number,number];
+    const BLUE = [59, 130, 246] as [number, number, number];
+    const DARK = [30, 41, 59] as [number, number, number];
+    const GRAY = [100, 116, 139] as [number, number, number];
 
     // ── Data ─────────────────────────────────────────────────────────────────
-    const title       = exam.title || "Examination Paper";
-    const difficulty  = (exam.difficulty || "Medium");
-    const dateStr     = exam.createdAt
+    const title = exam.title || "Examination Paper";
+    const difficulty = (exam.difficulty || "Medium");
+    const dateStr = exam.createdAt
         ? new Date(exam.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
         : new Date().toLocaleDateString('en-IN');
-    const qCount      = exam.questionsCount
-        ?? (Array.isArray(exam.questions)    ? exam.questions.length
-         : Array.isArray(exam.questionData) ? exam.questionData.length : 0);
+    const qCount = exam.questionsCount
+        ?? (Array.isArray(exam.questions) ? exam.questions.length
+            : Array.isArray(exam.questionData) ? exam.questionData.length : 0);
     const description = exam.description || "";
-    const topics      = Array.isArray(exam.topics)
+    const topics = Array.isArray(exam.topics)
         ? exam.topics.join(", ") : (exam.topics || "");
     const timeLimitType = exam?.timeLimitType === 'per-question'
         ? 'per question' : 'overall';
-    const timeLimit   = exam?.timeLimit ?? exam?.duration ?? 60;
-    const totalMarks  = exam.totalMarks ?? qCount;
-    const language    = exam.language || "English";
-    const questions   = (Array.isArray(exam.questions) ? exam.questions
-                       : Array.isArray(exam.questionData) ? exam.questionData : []);
+    const timeLimit = exam?.timeLimit ?? exam?.duration ?? 60;
+    const totalMarks = Math.round(exam.totalPoints ?? exam.totalMarks ?? qCount);
+    const language = exam.language || "English";
+    const questions = (Array.isArray(exam.questions) ? exam.questions
+        : Array.isArray(exam.questionData) ? exam.questionData : []);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 1.  HEADER
@@ -113,8 +113,8 @@ function buildExamPDF(doc: jsPDF, exam: any) {
     // 4.  QUESTIONS — strict two-column layout
     // ═══════════════════════════════════════════════════════════════════════
     questions.forEach((q: any, index: number) => {
-        const qText      = q.text || q.question || "No question text provided";
-        const marks      = q.marks ?? 1;
+        const qText = q.text || q.question || "No question text provided";
+        const marks = q.marks ?? 1;
         const marksLabel = `(${marks} Marks)`;
 
         // ── page break ────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ function buildExamPDF(doc: jsPDF, exam: any) {
 
             q.options.forEach((opt: string, oi: number) => {
                 if (y > pageHeight - 20) { doc.addPage(); y = 20; }
-                const letter   = String.fromCharCode(65 + oi);
+                const letter = String.fromCharCode(65 + oi);
                 const optLines = doc.splitTextToSize(`${letter}) ${opt}`, Q_TEXT_W + 8);
                 doc.text(optLines, Q_TEXT_X, y);
                 y += optLines.length * 6;

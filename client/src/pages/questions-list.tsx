@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import AppHeader from "./AppHeader";
 
 const MOCK_QUESTIONS_POOL = [
   {
@@ -94,7 +93,7 @@ export default function QuestionsListPage() {
   const [publishStatus, setPublishStatus] = useState("Draft");
   const [isPublishedExam, setIsPublishedExam] = useState(false);
   const [serverSyncFailed, setServerSyncFailed] = useState(false);
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -123,8 +122,8 @@ export default function QuestionsListPage() {
 
   const totalItems = paginatedData?.pagination?.totalItems || (examData?.questions?.length || 0);
   const totalPages = paginatedData?.pagination?.totalPages || Math.ceil(totalItems / pageSize) || 1;
-  const questionsToDisplay = paginatedData?.success 
-    ? paginatedData.data 
+  const questionsToDisplay = paginatedData?.success
+    ? paginatedData.data
     : (examData?.questions || []).slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
@@ -245,8 +244,8 @@ export default function QuestionsListPage() {
       return data;
     },
     onSuccess: () => {
-      const updated = { 
-        ...examData, 
+      const updated = {
+        ...examData,
         status: "PROCESSING",
         // Keep only locked questions, the rest will be replaced by newly generated ones
         questions: (examData?.questions || []).filter((q: any) => q.isLocked || q.isApproved)
@@ -255,7 +254,7 @@ export default function QuestionsListPage() {
       sessionStorage.setItem("current_exam_data", JSON.stringify(updated));
       setPublishStatus("Processing");
       toast.success("AI Regeneration started!");
-      
+
       // Invalidate questions query to show loading state if needed
       queryClient.invalidateQueries({ queryKey: [`/api/exams/${id}/questions`] });
     },
@@ -268,7 +267,7 @@ export default function QuestionsListPage() {
 
   const handleDelete = async (questionId: string) => {
     try {
-      if (questionId.length > 20 && !serverSyncFailed) { 
+      if (questionId.length > 20 && !serverSyncFailed) {
         try {
           await apiRequest("DELETE", `/api/exams/questions/${questionId}`);
           queryClient.invalidateQueries({ queryKey: [`/api/exams/${id}/questions`] });
@@ -327,7 +326,7 @@ export default function QuestionsListPage() {
           console.warn("Backend update failed, updating local state only", err);
         }
       }
-      
+
       const updatedQuestions = (examData?.questions || []).map((q: any) => ({ ...q, isLocked: true, isApproved: true }));
       const updatedData = { ...examData, questions: updatedQuestions };
       setExamData(updatedData);
@@ -437,14 +436,13 @@ export default function QuestionsListPage() {
 
   return (
     <>
-      <AppHeader />
-      <div className="min-h-screen bg-slate-100 flex flex-col">
+      <div className="bg-slate-100 flex flex-col font-inter">
 
         {/* EXAM INFO CARD */}
         <div className="container mx-auto px-6 py-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => setLocation("/dashboard")} 
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/dashboard")}
             className="mb-4 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -454,7 +452,7 @@ export default function QuestionsListPage() {
           <Card className="p-8 rounded-3xl shadow-xl bg-white/80 backdrop-blur-sm mb-8 border-0 relative overflow-hidden group">
             {/* Decorative background element */}
             <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500" />
-            
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
               <div className="space-y-6 flex-1 w-full">
                 <div className="flex items-center gap-3">
@@ -483,8 +481,8 @@ export default function QuestionsListPage() {
                     </div>
                     <div className="flex flex-col text-left">
                       <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Timing Type</span>
-                      <Select 
-                        value={examData.timeLimitType || "overall"} 
+                      <Select
+                        value={examData.timeLimitType || "overall"}
                         onValueChange={(val) => {
                           const updated = { ...examData, timeLimitType: val };
                           setExamData(updated);

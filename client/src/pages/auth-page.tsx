@@ -324,6 +324,7 @@ export default function AuthPage() {
         .replace(/\b\w/g, (c) => c.toUpperCase()));
 
       const newUser = {
+        _id: data.id,
         name: fullName,
         email,
         role: data.role || "teacher",
@@ -478,7 +479,7 @@ export default function AuthPage() {
       }
 
       const fullName = `${firstName} ${lastName}`;
-      login({ name: fullName, email, role: "student", isProfileComplete: true }, data.token);
+      login({ _id: data.user.id, name: fullName, email, role: "student", isProfileComplete: true }, data.token);
 
       toast({ title: "Welcome, Student! 🎓", description: "Account verified successfully." });
       setLocation("/dashboard");

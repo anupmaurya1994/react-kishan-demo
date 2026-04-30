@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import AppHeader from "../pages/AppHeader";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "../hooks/use-toast";
@@ -218,9 +217,7 @@ export default function Setting() {
 
     return (
         <>
-            <AppHeader />
-
-            <div className="min-h-screen bg-gray-100 py-16">
+            <div className="bg-gray-100 py-16">
                 <div className="max-w-3xl mx-auto px-6">
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
 
