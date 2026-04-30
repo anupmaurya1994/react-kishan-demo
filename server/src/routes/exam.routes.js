@@ -18,7 +18,12 @@ import {
   getExamById,
   updateExam,
   generateAIQuestions,
-  studentGetAllExams
+  studentGetAllExams,
+  submitExam,
+  retakeExam,
+  getLeaderboard,
+  getExamLeaderboard,
+  getStudentProfile
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -35,6 +40,21 @@ router.get("/published/:id", protect, getPublishedExamById);
 
 // STUDENT: GET ALL PUBLISHED EXAMS
 router.get("/student/all", protect, studentGetAllExams);
+
+// STUDENT: SUBMIT EXAM
+router.post("/student/submit", protect, submitExam);
+
+// STUDENT: RETAKE EXAM
+router.delete("/student/retake/:examId", protect, retakeExam);
+
+// GLOBAL LEADERBOARD
+router.get("/leaderboard", protect, getLeaderboard);
+
+// STUDENT PROFILE STATS
+router.get("/student/profile/:studentId", protect, getStudentProfile);
+
+// EXAM SPECIFIC LEADERBOARD
+router.get("/:examId/leaderboard", protect, getExamLeaderboard);
 
 
 // GET ALL EXAMS (Teacher only)

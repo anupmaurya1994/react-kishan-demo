@@ -2,12 +2,24 @@ import mongoose from "mongoose";
 import Exam from "../models/Exam.js";
 import Question from "../models/Question.js";
 import PublishedExam from "../models/PublishedExam.js";
+import Attempt from "../models/Attempt.js";
+import User from "../models/User.js";
+import Badge from "../models/Badge.js";
 import { extractTextFromFile } from "../utils/extractText.js";
 import { generateQuestionsFromText } from "../utils/aiQuestionGenerator.js";
 import { storeTextToVector } from "../utils/vectorStore.js";
 import { generateExamPDF } from "../utils/pdfGenerator.js";
 import path from "path";
 import fs from "fs";
+
+// Simple hourly cache for leaderboard
+let leaderboardCache = {
+  overall: { data: null, lastUpdated: 0 },
+  weekly: { data: null, lastUpdated: 0 },
+  monthly: { data: null, lastUpdated: 0 }
+};
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
 
 /* =========================
    CREATE EXAM
@@ -1023,17 +1035,459 @@ export const getExamById = async (req, res) => {
 ========================= */
 export const studentGetAllExams = async (req, res) => {
   try {
-    const publishedExams = await PublishedExam.find().sort({ publishedAt: -1 });
+    const publishedExams = await PublishedExam.find()
+      .populate("createdBy", "firstName lastName")
+      .sort({ publishedAt: -1 })
+      .lean();
+
+    // Fetch attempts for this student to mark completion
+    const attempts = await Attempt.find({ studentId: req.user._id });
+    const completedExamIds = attempts.map(a => a.examId.toString());
+
+    const examsWithStatus = publishedExams.map(exam => {
+      const attempt = attempts.find(a => a.examId.toString() === exam._id.toString());
+      return {
+        ...exam,
+        isCompleted: !!attempt,
+        score: attempt?.score || 0,
+        totalMarks: attempt?.totalMarks || exam.totalMarks || 0,
+        percentage: attempt ? (attempt.score / attempt.totalMarks) * 100 : 0,
+        timeTaken: attempt?.timeTaken,
+        avgTimePerQuestion: attempt?.avgTimePerQuestion,
+        totalQuestions: attempt?.totalQuestions,
+        attemptedCount: attempt?.attemptedCount,
+        correctCount: attempt?.correctCount,
+        wrongCount: attempt?.wrongCount
+      };
+    });
 
     return res.status(200).json({
       success: true,
-      count: publishedExams.length,
-      data: publishedExams,
+      count: examsWithStatus.length,
+      data: examsWithStatus,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: error.message,
     });
+  }
+};
+
+/* =========================
+   SUBMIT EXAM (STUDENT)
+ ========================= */
+export const submitExam = async (req, res) => {
+  try {
+    const { examId, answers, timeTaken, avgTimePerQuestion, stats } = req.body;
+    const studentId = req.user._id;
+
+    // Check for existing attempt
+    const existingAttempt = await Attempt.findOne({ studentId, examId });
+
+    const publishedExam = await PublishedExam.findById(examId);
+    if (!publishedExam) {
+      return res.status(404).json({
+        success: false,
+        message: "Exam not found",
+      });
+    }
+
+    // Gamified Scoring System: Base 10 pts + Difficulty Multiplier
+    let score = 0;
+    let maxPossibleScore = 0;
+
+    publishedExam.questions.forEach(q => {
+      let multiplier = 1;
+      if (q.difficulty) {
+        const d = q.difficulty.toUpperCase();
+        if (d === 'MEDIUM') multiplier = 1.5;
+        else if (d === 'HARD') multiplier = 2;
+      }
+      maxPossibleScore += (10 * multiplier);
+    });
+
+    const gradedAnswers = answers.map(ans => {
+      const question = publishedExam.questions.find(q => q.questionId.toString() === ans.questionId);
+      const isCorrect = question && question.correctAnswer === ans.selectedOption;
+      
+      if (isCorrect && question) {
+        let multiplier = 1;
+        if (question.difficulty) {
+          const d = question.difficulty.toUpperCase();
+          if (d === 'MEDIUM') multiplier = 1.5;
+          else if (d === 'HARD') multiplier = 2;
+        }
+        score += (10 * multiplier);
+      }
+      
+      return {
+        ...ans,
+        isCorrect
+      };
+    });
+
+    let finalAttempt;
+    if (existingAttempt) {
+      // Retake Logic: Only update if score is higher
+      if (score > existingAttempt.score) {
+        existingAttempt.answers = answers;
+        existingAttempt.score = score;
+        existingAttempt.totalMarks = maxPossibleScore;
+        existingAttempt.totalQuestions = stats?.totalQuestions || publishedExam.questions.length;
+        existingAttempt.attemptedCount = stats?.attemptedCount || answers.length;
+        existingAttempt.correctCount = stats?.correctCount || gradedAnswers.filter(a => a.isCorrect).length;
+        existingAttempt.wrongCount = stats?.wrongCount || (answers.length - gradedAnswers.filter(a => a.isCorrect).length);
+        existingAttempt.timeTaken = timeTaken;
+        existingAttempt.avgTimePerQuestion = avgTimePerQuestion;
+        await existingAttempt.save();
+        finalAttempt = existingAttempt;
+      } else {
+        // Score is lower or same, keep old high score but return current result for UI
+        finalAttempt = {
+          ...existingAttempt.toObject(),
+          currentAttemptScore: score, // Optional: show they got this score now, but high score is kept
+          isHighScoreUpdate: false
+        };
+      }
+    } else {
+      // First attempt
+      finalAttempt = await Attempt.create({
+        studentId,
+        examId,
+        answers,
+        score,
+        totalMarks: maxPossibleScore,
+        totalQuestions: stats?.totalQuestions || publishedExam.questions.length,
+        attemptedCount: stats?.attemptedCount || answers.length,
+        correctCount: stats?.correctCount || gradedAnswers.filter(a => a.isCorrect).length,
+        wrongCount: stats?.wrongCount || (answers.length - gradedAnswers.filter(a => a.isCorrect).length),
+        timeTaken,
+        avgTimePerQuestion,
+        status: "completed",
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: existingAttempt && score <= existingAttempt.score 
+        ? "Exam retaken, but your previous high score was better!" 
+        : "Exam submitted successfully!",
+      data: finalAttempt,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   RETAKE EXAM (STUDENT)
+ ========================= */
+export const retakeExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const studentId = req.user._id;
+
+    // Retake logic: We no longer delete the previous attempt.
+    // Instead, submitExam handles updating the highest score.
+    return res.status(200).json({
+      success: true,
+      message: "You can now retake the exam. Your highest score will be preserved.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET EXAM SPECIFIC LEADERBOARD
+========================= */
+export const getExamLeaderboard = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const leaderboard = await Attempt.aggregate([
+      { $match: { examId: new mongoose.Types.ObjectId(examId) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "studentId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          studentId: "$studentId",
+          name: {
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$user.firstName", ""] },
+                  " ",
+                  { $ifNull: ["$user.lastName", ""] }
+                ]
+              }
+            }
+          },
+          score: { $round: ["$score", 0] },
+          timeTaken: 1,
+          createdAt: 1
+        }
+      },
+      // Tie-breaker: sort by score desc, then timeTaken asc
+      { $sort: { score: -1, timeTaken: 1, createdAt: 1 } },
+      { $limit: 100 }
+    ]);
+
+    const ranked = leaderboard.map((student, index) => ({
+      rank: index + 1,
+      ...student,
+    }));
+
+    return res.status(200).json({ success: true, data: ranked });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   GET STUDENT PROFILE STATS
+========================= */
+export const getStudentProfile = async (req, res) => {
+  try {
+    let { studentId } = req.params;
+
+    if (studentId === 'me') {
+      studentId = req.user._id.toString();
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({ success: false, message: "Invalid student ID" });
+    }
+
+    const studentObjId = new mongoose.Types.ObjectId(studentId);
+
+    // Fetch all attempts for this student, joined with PublishedExam difficulty
+    const attempts = await Attempt.aggregate([
+      { $match: { studentId: studentObjId } },
+      {
+        $lookup: {
+          from: "publishedexams",
+          localField: "examId",
+          foreignField: "_id",
+          as: "exam"
+        }
+      },
+      { $unwind: "$exam" },
+      {
+        $project: {
+          score: 1,
+          totalMarks: 1,
+          difficulty: { $toLower: "$exam.difficulty" },
+          percentage: {
+            $cond: [
+              { $gt: ["$totalMarks", 0] },
+              { $multiply: [{ $divide: ["$score", "$totalMarks"] }, 100] },
+              0
+            ]
+          }
+        }
+      }
+    ]);
+
+    const totalExams = attempts.length;
+    const avgScore = totalExams > 0
+      ? Math.round(attempts.reduce((s, a) => s + a.percentage, 0) / totalExams)
+      : 0;
+
+    const easyExams = attempts.filter(a => a.difficulty === "easy").length;
+    const mediumExams = attempts.filter(a => a.difficulty === "medium").length;
+    const hardExams = attempts.filter(a => a.difficulty === "hard").length;
+
+    // Fetch Badges
+    const badges = await Badge.find({ studentId: studentObjId });
+    const badgeCounts = {
+      weekly: {
+        gold: badges.filter(b => b.category === "weekly" && b.type === "gold").length,
+        silver: badges.filter(b => b.category === "weekly" && b.type === "silver").length,
+        bronze: badges.filter(b => b.category === "weekly" && b.type === "bronze").length,
+      },
+      monthly: {
+        gold: badges.filter(b => b.category === "monthly" && b.type === "gold").length,
+        silver: badges.filter(b => b.category === "monthly" && b.type === "silver").length,
+        bronze: badges.filter(b => b.category === "monthly" && b.type === "bronze").length,
+      },
+      total: badges.length
+    };
+
+    // Fetch user name - Accessing model via mongoose to avoid import issues
+    const student = await User.findById(studentId).select("firstName lastName email");
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        studentId,
+        name: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+        email: student.email,
+        totalExams,
+        avgScore,
+        easyExams,
+        mediumExams,
+        hardExams,
+        badgeCounts
+      }
+    });
+  } catch (error) {
+    console.error("Profile API Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   GET LEADERBOARD
+========================= */
+export const getLeaderboard = async (req, res) => {
+  try {
+    const { timeframe = "overall" } = req.query; // overall, weekly, monthly
+    const now = new Date();
+    
+    // Calculate start of current hour for precise hourly updates
+    const currentHourStart = new Date(now);
+    currentHourStart.setMinutes(0, 0, 0);
+    const lastUpdated = currentHourStart.getTime();
+
+    // Check Cache - Valid if updated within this same hour
+    if (
+      leaderboardCache[timeframe] &&
+      leaderboardCache[timeframe].data &&
+      leaderboardCache[timeframe].lastUpdated === lastUpdated
+    ) {
+      return res.status(200).json({
+        success: true,
+        data: leaderboardCache[timeframe].data,
+        cached: true,
+        nextUpdate: new Date(lastUpdated + CACHE_DURATION)
+      });
+    }
+
+    const matchStage = {};
+    if (timeframe === "weekly") {
+      // Weekly: Starts every Monday at 5:30 AM
+      const weeklyStart = new Date(now);
+      const day = weeklyStart.getDay(); // 0 is Sunday, 1 is Monday
+      // Calculate days to subtract to get to the most recent Monday
+      const daysSinceMonday = (day + 6) % 7; 
+      weeklyStart.setDate(weeklyStart.getDate() - daysSinceMonday);
+      weeklyStart.setHours(5, 30, 0, 0);
+      
+      // If the calculated Monday 5:30 AM is in the future (e.g. today is Monday but before 5:30), go back 7 days
+      if (weeklyStart > now) {
+        weeklyStart.setDate(weeklyStart.getDate() - 7);
+      }
+      matchStage.createdAt = { $gte: weeklyStart };
+    } else if (timeframe === "monthly") {
+      // Monthly: Starts every 1st of the month at 5:30 AM
+      const monthlyStart = new Date(now.getFullYear(), now.getMonth(), 1, 5, 30, 0, 0);
+      
+      // If the 1st at 5:30 AM is in the future (e.g. today is the 1st but before 5:30), go back 1 month
+      if (monthlyStart > now) {
+        monthlyStart.setMonth(monthlyStart.getMonth() - 1);
+      }
+      matchStage.createdAt = { $gte: monthlyStart };
+    }
+
+    const leaderboard = await Attempt.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: "$studentId",
+          totalPoints: { $sum: "$score" },
+          examsTaken: { $sum: 1 },
+          totalPercentage: {
+            $sum: {
+              $cond: [
+                { $gt: ["$totalMarks", 0] },
+                { $multiply: [{ $divide: ["$score", "$totalMarks"] }, 100] },
+                0
+              ]
+            }
+          },
+          totalTimeTaken: { $sum: "$timeTaken" },
+        },
+      },
+      {
+        $addFields: {
+          totalPoints: { $round: ["$totalPoints", 0] },
+          avgScore: {
+            $round: [{ $divide: ["$totalPercentage", "$examsTaken"] }, 0]
+          },
+        }
+      },
+      { $sort: { totalPoints: -1, avgScore: -1, totalTimeTaken: 1 } },
+      { $limit: 50 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          studentId: "$_id",
+          name: {
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$user.firstName", ""] },
+                  " ",
+                  { $ifNull: ["$user.lastName", ""] }
+                ]
+              }
+            }
+          },
+          totalPoints: 1,
+          examsTaken: 1,
+          avgScore: 1,
+        }
+      }
+    ]);
+
+    const ranked = leaderboard.map((student, index) => ({
+      rank: index + 1,
+      ...student,
+    }));
+
+    // Update Cache
+    leaderboardCache[timeframe] = {
+      data: ranked,
+      lastUpdated: lastUpdated
+    };
+
+
+    return res.status(200).json({
+      success: true,
+      data: ranked,
+      cached: false,
+      nextUpdate: new Date(lastUpdated + CACHE_DURATION)
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
