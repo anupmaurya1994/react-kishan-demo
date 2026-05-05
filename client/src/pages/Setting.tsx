@@ -217,33 +217,33 @@ export default function Setting() {
 
     return (
         <>
-            <div className="bg-gray-100 py-16">
+            <div className="bg-background dark:bg-slate-950 py-16 transition-colors duration-300 min-h-screen">
                 <div className="max-w-3xl mx-auto px-6">
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-slate-800">
 
                         {/* Header */}
                         <div className="px-8 pt-8 pb-6 flex items-center gap-4">
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-10 w-10 rounded-full hover:bg-slate-100 transition-all active:scale-95 border border-slate-100"
+                                className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 border border-slate-100 dark:border-slate-800"
                                 onClick={() => setLocation("/dashboard")}
                             >
-                                <ArrowLeft className="h-5 w-5 text-slate-600" />
+                                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                             </Button>
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                                 Account Settings
                             </h1>
                         </div>
 
                         {/* Tabs */}
                         <div className="px-8">
-                            <div className="flex gap-3 bg-gray-100 p-1 rounded-lg w-fit">
+                            <div className="flex gap-3 bg-gray-100 dark:bg-slate-800 p-1 rounded-lg w-fit">
                                 <button
                                     onClick={() => setActiveTab("personal")}
                                     className={`px-5 py-2 text-sm font-medium rounded-md transition ${activeTab === "personal"
-                                        ? "bg-white shadow text-gray-900"
-                                        : "text-gray-600 hover:text-gray-900"
+                                        ? "bg-white dark:bg-slate-700 shadow text-gray-900 dark:text-slate-100"
+                                        : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200"
                                         }`}
                                 >
                                     Personal Information
@@ -252,8 +252,8 @@ export default function Setting() {
                                 <button
                                     onClick={() => setActiveTab("password")}
                                     className={`px-5 py-2 text-sm font-medium rounded-md transition ${activeTab === "password"
-                                        ? "bg-white shadow text-gray-900"
-                                        : "text-gray-600 hover:text-gray-900"
+                                        ? "bg-white dark:bg-slate-700 shadow text-gray-900 dark:text-slate-100"
+                                        : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200"
                                         }`}
                                 >
                                     Change Password
@@ -269,7 +269,7 @@ export default function Setting() {
                                 <form onSubmit={handleProfileSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-600 mb-2">
+                                            <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                                                 First Name
                                             </label>
                                             <input
@@ -277,13 +277,13 @@ export default function Setting() {
                                                 value={profileFields.firstName}
                                                 onChange={(e) => setProfileFields({ ...profileFields, firstName: e.target.value })}
                                                 placeholder="John"
-                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.firstName ? 'border-red-500' : 'border-gray-300'} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
+                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.firstName ? 'border-red-500' : 'border-gray-300 dark:border-slate-700'} bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground`}
                                             />
                                             {profileErrors.firstName && <p className="text-xs text-red-500 mt-1">{profileErrors.firstName}</p>}
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-600 mb-2">
+                                            <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                                                 Last Name
                                             </label>
                                             <input
@@ -291,13 +291,13 @@ export default function Setting() {
                                                 value={profileFields.lastName}
                                                 onChange={(e) => setProfileFields({ ...profileFields, lastName: e.target.value })}
                                                 placeholder="Doe"
-                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.lastName ? 'border-red-500' : 'border-gray-300'} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
+                                                className={`w-full px-4 py-2.5 rounded-lg border ${profileErrors.lastName ? 'border-red-500' : 'border-gray-300 dark:border-slate-700'} bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground`}
                                             />
                                             {profileErrors.lastName && <p className="text-xs text-red-500 mt-1">{profileErrors.lastName}</p>}
                                         </div>
 
                                         <div className="sm:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-600 mb-2">
+                                            <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-2">
                                                 Email Address
                                             </label>
                                             <input
@@ -305,7 +305,7 @@ export default function Setting() {
                                                 value={profileFields.email}
                                                 onChange={(e) => setProfileFields({ ...profileFields, email: e.target.value })}
                                                 placeholder="john@example.com"
-                                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
+                                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground"
                                             />
                                         </div>
                                     </div>
@@ -329,7 +329,7 @@ export default function Setting() {
 
                                     {/* Current Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">
+                                        <label className="block text-sm font-medium text-gray-600 dark:text-slate-400">
                                             Current Password
                                         </label>
 
@@ -339,7 +339,7 @@ export default function Setting() {
                                                 placeholder="Enter current password"
                                                 value={passwordFields.currentPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, currentPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.currentPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.currentPassword ? "border-red-500" : "border-gray-300 dark:border-slate-700"} bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground`}
                                             />
 
                                             <button
@@ -355,7 +355,7 @@ export default function Setting() {
 
                                     {/* New Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">
+                                        <label className="block text-sm font-medium text-gray-600 dark:text-slate-400">
                                             New Password
                                         </label>
 
@@ -365,7 +365,7 @@ export default function Setting() {
                                                 placeholder="Enter new password"
                                                 value={passwordFields.newPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, newPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.newPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.newPassword ? "border-red-500" : "border-gray-300 dark:border-slate-700"} bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground`}
                                             />
 
                                             <button
@@ -381,7 +381,7 @@ export default function Setting() {
 
                                     {/* Confirm Password */}
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">
+                                        <label className="block text-sm font-medium text-gray-600 dark:text-slate-400">
                                             Confirm Password
                                         </label>
 
@@ -391,7 +391,7 @@ export default function Setting() {
                                                 placeholder="Confirm new password"
                                                 value={passwordFields.confirmPassword}
                                                 onChange={(e) => setPasswordFields({ ...passwordFields, confirmPassword: e.target.value })}
-                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.confirmPassword ? "border-red-500" : "border-gray-300"} bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none transition`}
+                                                className={`w-full px-4 py-2.5 pr-12 rounded-lg border ${passwordErrors.confirmPassword ? "border-red-500" : "border-gray-300 dark:border-slate-700"} bg-gray-50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary/20 focus:outline-none transition text-foreground`}
                                             />
 
                                             <button

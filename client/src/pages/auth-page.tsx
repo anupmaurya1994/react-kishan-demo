@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BrainCircuit, Sparkles, BookOpenCheck, Eye, EyeOff, MapPin, Building2, BookOpen, Briefcase } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BrainCircuit, Sparkles, BookOpenCheck, Eye, EyeOff, MapPin, Building2, BookOpen, Briefcase, ShieldCheck } from "lucide-react";
 import authBg from "../assets/images/auth-bg.png";
 import { toast } from "../hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
@@ -14,7 +15,7 @@ import { indianStates, getCitiesForState, getCollegesForCity } from "../data/ind
 export default function AuthPage() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeView, setActiveView] = useState<"student-login" | "student-signup" | "teacher-login" | "teacher-signup" | "teacher-onboarding">("student-login");
+  const [activeView, setActiveView] = useState<"student-login" | "student-signup" | "teacher-login" | "teacher-signup" | "teacher-onboarding" | "admin-login">("student-login");
 
   const [showPassword, setShowPassword] = useState({
     teacherLogin: false,
@@ -288,7 +289,7 @@ export default function AuthPage() {
   //   }
   // };
 
-  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>, role: "teacher" | "student") => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>, role: "teacher" | "student" | "admin") => {
     e.preventDefault();
 
     const { email, password } = loginFields;
@@ -610,7 +611,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-slate-50/50">
+    <div className="min-h-screen w-full flex bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
       {/* Left side - Visual/Branding */}
       <div className="hidden lg:flex w-1/2 relative flex-col justify-between overflow-hidden">
         {/* Background Image */}
@@ -618,9 +619,9 @@ export default function AuthPage() {
           <img
             src={authBg}
             alt="Abstract educational technology"
-            className="w-full h-full object-cover opacity-90 mix-blend-multiply"
+            className="w-full h-full object-cover opacity-90 dark:opacity-50 mix-blend-multiply"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-blue-900/40 to-transparent mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-blue-900/40 to-transparent dark:from-slate-950 dark:via-slate-900/80 mix-blend-multiply" />
         </div>
 
         <div className="relative z-10 p-12 text-white">
@@ -668,28 +669,28 @@ export default function AuthPage() {
             <div className="bg-primary/10 p-2 rounded-xl">
               <BrainCircuit className="h-6 w-6 text-primary" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">ExamAI</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">ExamAI</span>
           </div>
 
           <Tabs value={activeView} onValueChange={(val: any) => setActiveView(val)} className="w-full">
             <TabsContent value="teacher-login" className="mt-0">
-              <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl bg-white/80 backdrop-blur-xl">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
                 <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
-                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</CardTitle>
-                  <CardDescription className="text-slate-500 font-inter">
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Welcome back</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
                     Enter your email to sign in to your account
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={(e) => handleLoginSubmit(e, 'teacher')} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-slate-700 font-medium">Email</Label>
+                      <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
                       <Input
                         id="email"
                         name="email"
                         type="email"
                         placeholder="teacher@college.edu"
-                        className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                        className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                         value={loginFields.email}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -705,7 +706,7 @@ export default function AuthPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
+                        <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
                         <a href="#" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
                           Forgot password?
                         </a>
@@ -715,7 +716,7 @@ export default function AuthPage() {
                           id="password"
                           name="password"
                           type={showPassword.teacherLogin ? "text" : "password"}
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 pr-10"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 pr-10 text-foreground"
                           value={loginFields.password}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -749,14 +750,15 @@ export default function AuthPage() {
                     </Button>
                   </form>
 
-                  <div className="mt-6 text-center text-sm text-slate-500 font-inter">
+                  <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter">
                     By clicking continue, you agree to our{" "}
                     <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Terms of Service</a>{" "}
                     and{" "}
                     <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Privacy Policy</a>.
                     <div className="mt-4 flex justify-between text-sm">
                       <button type="button" onClick={() => setActiveView("teacher-signup")} className="text-primary hover:underline">Register as Teacher</button>
-                      <button type="button" onClick={() => setActiveView("student-login")} className="text-slate-500 hover:underline">I'm a Student</button>
+                      <button type="button" onClick={() => setActiveView("admin-login")} className="text-slate-500 dark:text-slate-400 hover:underline">Admin Login</button>
+                      <button type="button" onClick={() => setActiveView("student-login")} className="text-slate-500 dark:text-slate-400 hover:underline">I'm a Student</button>
                     </div>
                   </div>
                 </CardContent>
@@ -764,10 +766,10 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="teacher-signup" className="mt-0">
-              <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl bg-white/80 backdrop-blur-xl">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
                 <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
-                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Teacher Registration</CardTitle>
-                  <CardDescription className="text-slate-500 font-inter">
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Teacher Registration</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
                     {teacherStep === "email" ? "Enter your email to receive an OTP" : "Verify OTP and complete your profile"}
                   </CardDescription>
                 </CardHeader>
@@ -775,12 +777,12 @@ export default function AuthPage() {
                   {teacherStep === "email" ? (
                     <form onSubmit={handleTeacherSendOTP} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="teacher-reg-email" className="text-slate-700 font-medium">Email</Label>
+                        <Label htmlFor="teacher-reg-email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
                         <Input
                           id="teacher-reg-email"
                           type="email"
                           placeholder="teacher@college.edu"
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                           value={teacherFields.email}
                           onChange={(e) => setTeacherFields({ ...teacherFields, email: e.target.value })}
                         />
@@ -797,12 +799,12 @@ export default function AuthPage() {
                   ) : (
                     <form onSubmit={handleTeacherVerifyOTP} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="teacher-otp" className="text-slate-700 font-medium">Enter 6-digit OTP</Label>
+                        <Label htmlFor="teacher-otp" className="text-slate-700 dark:text-slate-300 font-medium">Enter 6-digit OTP</Label>
                         <Input
                           id="teacher-otp"
                           placeholder="123456"
                           maxLength={6}
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 text-center text-2xl tracking-[0.5em] font-bold"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-center text-2xl tracking-[0.5em] font-bold text-foreground"
                           value={teacherFields.otp}
                           onChange={(e) => setTeacherFields({ ...teacherFields, otp: e.target.value })}
                         />
@@ -810,22 +812,22 @@ export default function AuthPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="teacher-first-name" className="text-slate-700 font-medium">First name</Label>
+                          <Label htmlFor="teacher-first-name" className="text-slate-700 dark:text-slate-300 font-medium">First name</Label>
                           <Input
                             id="teacher-first-name"
                             placeholder="Jane"
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                             value={teacherFields.firstName}
                             onChange={(e) => setTeacherFields({ ...teacherFields, firstName: e.target.value })}
                           />
                           {teacherErrors.firstName && <p className="text-red-500 text-sm">{teacherErrors.firstName}</p>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="teacher-last-name" className="text-slate-700 font-medium">Last name</Label>
+                          <Label htmlFor="teacher-last-name" className="text-slate-700 dark:text-slate-300 font-medium">Last name</Label>
                           <Input
                             id="teacher-last-name"
                             placeholder="Doe"
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                             value={teacherFields.lastName}
                             onChange={(e) => setTeacherFields({ ...teacherFields, lastName: e.target.value })}
                           />
@@ -834,12 +836,12 @@ export default function AuthPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="teacher-reg-password" className="text-slate-700 font-medium">Password</Label>
+                        <Label htmlFor="teacher-reg-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
                         <div className="relative">
                           <Input
                             id="teacher-reg-password"
                             type={showPassword.teacherSignup ? "text" : "password"}
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 pr-10"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 pr-10 text-foreground"
                             value={teacherFields.password}
                             onChange={(e) => setTeacherFields({ ...teacherFields, password: e.target.value })}
                           />
@@ -865,7 +867,7 @@ export default function AuthPage() {
                           type="button"
                           variant="ghost"
                           onClick={() => setTeacherStep("email")}
-                          className="text-slate-500 hover:text-primary transition-colors"
+                          className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
                         >
                           Back to Email
                         </Button>
@@ -873,33 +875,33 @@ export default function AuthPage() {
                     </form>
                   )}
                   
-                  <div className="mt-6 text-center text-sm text-slate-500 font-inter border-t pt-4 border-slate-100">
+                  <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter border-t pt-4 border-slate-100 dark:border-slate-800">
                     <button type="button" onClick={() => setActiveView("teacher-login")} className="text-primary hover:underline">Already have an account? Login</button>
                     <div className="mt-2">
-                      <button type="button" onClick={() => setActiveView("student-signup")} className="text-slate-500 hover:underline">I'm a Student</button>
+                      <button type="button" onClick={() => setActiveView("student-signup")} className="text-slate-500 dark:text-slate-400 hover:underline">I'm a Student</button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
             <TabsContent value="student-login" className="mt-0">
-              <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl bg-white/80 backdrop-blur-xl">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
                 <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
-                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Student Sign in</CardTitle>
-                  <CardDescription className="text-slate-500 font-inter">
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Student Sign in</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
                     Enter your email to sign in to your student account
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={(e) => handleLoginSubmit(e, 'student')} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="student-email" className="text-slate-700 font-medium">Email</Label>
+                      <Label htmlFor="student-email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
                       <Input
                         id="student-email"
                         name="email"
                         type="email"
                         placeholder="student@college.edu"
-                        className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                        className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                         value={loginFields.email}
                         onChange={(e) => {
                           setLoginFields({ ...loginFields, email: e.target.value });
@@ -909,13 +911,13 @@ export default function AuthPage() {
                       {loginErrors.email && <p className="text-red-500 text-sm">{loginErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="student-password" className="text-slate-700 font-medium">Password</Label>
+                      <Label htmlFor="student-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
                       <div className="relative">
                         <Input
                           id="student-password"
                           name="password"
                           type={showPassword.studentLogin ? "text" : "password"}
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 pr-10"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 pr-10 text-foreground"
                           value={loginFields.password}
                           onChange={(e) => {
                             setLoginFields({ ...loginFields, password: e.target.value });
@@ -940,10 +942,85 @@ export default function AuthPage() {
                       {isLoading ? "Signing in..." : "Sign in as Student"}
                     </Button>
                   </form>
-                  <div className="mt-6 text-center text-sm text-slate-500 font-inter border-t pt-4 border-slate-100">
+                  <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter border-t pt-4 border-slate-100 dark:border-slate-800">
                     <div className="flex justify-between">
                       <button type="button" onClick={() => setActiveView("student-signup")} className="text-primary hover:underline">Register as Student</button>
-                      <button type="button" onClick={() => setActiveView("teacher-login")} className="text-slate-500 hover:underline">I'm a Teacher</button>
+                      <button type="button" onClick={() => setActiveView("admin-login")} className="text-slate-500 dark:text-slate-400 hover:underline">Admin Login</button>
+                      <button type="button" onClick={() => setActiveView("teacher-login")} className="text-slate-500 dark:text-slate-400 hover:underline">I'm a Teacher</button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="admin-login" className="mt-0">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
+                <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
+                  <div className="flex items-center gap-2 mb-2 lg:justify-start justify-center">
+                    <div className="bg-indigo-500/10 p-2 rounded-xl">
+                      <ShieldCheck className="h-6 w-6 text-indigo-500" />
+                    </div>
+                    <Badge variant="outline" className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20">Administrator</Badge>
+                  </div>
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Admin Sign in</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
+                    Enter your administrative credentials to access the portal
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={(e) => handleLoginSubmit(e, 'admin')} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
+                      <Input
+                        id="admin-email"
+                        name="email"
+                        type="email"
+                        placeholder="admin@examai.com"
+                        className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
+                        value={loginFields.email}
+                        onChange={(e) => {
+                          setLoginFields({ ...loginFields, email: e.target.value });
+                          if (loginErrors.email) setLoginErrors({ ...loginErrors, email: "" });
+                        }}
+                      />
+                      {loginErrors.email && <p className="text-red-500 text-sm">{loginErrors.email}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="admin-password"
+                          name="password"
+                          type={showPassword.teacherLogin ? "text" : "password"}
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 pr-10 text-foreground"
+                          value={loginFields.password}
+                          onChange={(e) => {
+                            setLoginFields({ ...loginFields, password: e.target.value });
+                            if (loginErrors.password) setLoginErrors({ ...loginErrors, password: "" });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility("teacherLogin")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                        >
+                          {showPassword.teacherLogin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {loginErrors.password && <p className="text-red-500 text-sm">{loginErrors.password}</p>}
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full rounded-xl h-11 text-base font-semibold shadow-md shadow-indigo-500/20 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all duration-300 active:scale-[0.98]"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Authenticating..." : "Login as Administrator"}
+                    </Button>
+                  </form>
+                  <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter border-t pt-4 border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-between">
+                      <button type="button" onClick={() => setActiveView("teacher-login")} className="text-primary hover:underline">I'm a Teacher</button>
+                      <button type="button" onClick={() => setActiveView("student-login")} className="text-slate-500 dark:text-slate-400 hover:underline">I'm a Student</button>
                     </div>
                   </div>
                 </CardContent>
@@ -951,10 +1028,10 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="student-signup" className="mt-0">
-              <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl bg-white/80 backdrop-blur-xl">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
                 <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
-                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Student Registration</CardTitle>
-                  <CardDescription className="text-slate-500 font-inter">
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Student Registration</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
                     {studentStep === "email" ? "Enter your email to receive an OTP" : "Verify OTP and complete your profile"}
                   </CardDescription>
                 </CardHeader>
@@ -962,12 +1039,12 @@ export default function AuthPage() {
                   {studentStep === "email" ? (
                     <form onSubmit={handleStudentSendOTP} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="student-reg-email" className="text-slate-700 font-medium">Email</Label>
+                        <Label htmlFor="student-reg-email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
                         <Input
                           id="student-reg-email"
                           type="email"
                           placeholder="student@college.edu"
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                           value={studentFields.email}
                           onChange={(e) => setStudentFields({ ...studentFields, email: e.target.value })}
                         />
@@ -984,12 +1061,12 @@ export default function AuthPage() {
                   ) : (
                     <form onSubmit={handleStudentVerifyOTP} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="student-otp" className="text-slate-700 font-medium">Enter 6-digit OTP</Label>
+                        <Label htmlFor="student-otp" className="text-slate-700 dark:text-slate-300 font-medium">Enter 6-digit OTP</Label>
                         <Input
                           id="student-otp"
                           placeholder="123456"
                           maxLength={6}
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 text-center text-2xl tracking-[0.5em] font-bold"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-center text-2xl tracking-[0.5em] font-bold text-foreground"
                           value={studentFields.otp}
                           onChange={(e) => setStudentFields({ ...studentFields, otp: e.target.value })}
                         />
@@ -997,22 +1074,22 @@ export default function AuthPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="student-first-name" className="text-slate-700 font-medium">First name</Label>
+                          <Label htmlFor="student-first-name" className="text-slate-700 dark:text-slate-300 font-medium">First name</Label>
                           <Input
                             id="student-first-name"
                             placeholder="Jane"
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                             value={studentFields.firstName}
                             onChange={(e) => setStudentFields({ ...studentFields, firstName: e.target.value })}
                           />
                           {studentErrors.firstName && <p className="text-red-500 text-sm">{studentErrors.firstName}</p>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="student-last-name" className="text-slate-700 font-medium">Last name</Label>
+                          <Label htmlFor="student-last-name" className="text-slate-700 dark:text-slate-300 font-medium">Last name</Label>
                           <Input
                             id="student-last-name"
                             placeholder="Doe"
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                             value={studentFields.lastName}
                             onChange={(e) => setStudentFields({ ...studentFields, lastName: e.target.value })}
                           />
@@ -1020,12 +1097,12 @@ export default function AuthPage() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="student-reg-password" className="text-slate-700 font-medium">Create Password</Label>
+                        <Label htmlFor="student-reg-password" className="text-slate-700 dark:text-slate-300 font-medium">Create Password</Label>
                         <div className="relative">
                           <Input
                             id="student-reg-password"
                             type={showPassword.studentSignup ? "text" : "password"}
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11 pr-10"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 pr-10 text-foreground"
                             value={studentFields.password}
                             onChange={(e) => setStudentFields({ ...studentFields, password: e.target.value })}
                           />
@@ -1051,17 +1128,17 @@ export default function AuthPage() {
                           type="button"
                           variant="ghost"
                           onClick={() => setStudentStep("email")}
-                          className="text-slate-500 hover:text-primary transition-colors"
+                          className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
                         >
                           Back to Email
                         </Button>
                       </div>
                     </form>
                   )}
-                  <div className="mt-6 text-center text-sm text-slate-500 font-inter border-t pt-4 border-slate-100">
+                  <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter border-t pt-4 border-slate-100 dark:border-slate-800">
                     <div className="flex justify-between">
                       <button type="button" onClick={() => setActiveView("student-login")} className="text-primary hover:underline">Already have an account? Login</button>
-                      <button type="button" onClick={() => setActiveView("teacher-signup")} className="text-slate-500 hover:underline">I'm a Teacher</button>
+                      <button type="button" onClick={() => setActiveView("teacher-signup")} className="text-slate-500 dark:text-slate-400 hover:underline">I'm a Teacher</button>
                     </div>
                   </div>
                 </CardContent>
@@ -1069,15 +1146,15 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="teacher-onboarding" className="mt-0">
-              <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl bg-white/80 backdrop-blur-xl">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
                 <CardHeader className="space-y-1 pb-4 text-center">
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <div className="bg-primary/10 p-2 rounded-xl">
                       <Building2 className="h-5 w-5 text-primary" />
                     </div>
                   </div>
-                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Complete Your Profile</CardTitle>
-                  <CardDescription className="text-slate-500 font-inter text-sm">
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Complete Your Profile</CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter text-sm">
                     🔒 Required before accessing the dashboard. This information helps personalize your teaching experience.
                   </CardDescription>
                 </CardHeader>
@@ -1086,22 +1163,22 @@ export default function AuthPage() {
 
                     {/* State */}
                     <div className="space-y-2">
-                      <Label htmlFor="onboarding-state" className="text-slate-700 font-medium flex items-center gap-1.5">
+                      <Label htmlFor="onboarding-state" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-primary" /> State <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <select
                           id="onboarding-state"
-                          className="w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 appearance-none cursor-pointer"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 dark:text-slate-200 appearance-none cursor-pointer"
                           value={onboardingFields.state}
                           onChange={(e) => {
                             setOnboardingFields({ ...onboardingFields, state: e.target.value, city: "", college: "" });
                             if (onboardingErrors.state) setOnboardingErrors({ ...onboardingErrors, state: "" });
                           }}
                         >
-                          <option value="">-- Select State --</option>
+                          <option value="" className="dark:bg-slate-950">-- Select State --</option>
                           {indianStates.map(s => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s} className="dark:bg-slate-950">{s}</option>
                           ))}
                         </select>
                         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
@@ -1111,13 +1188,13 @@ export default function AuthPage() {
 
                     {/* City */}
                     <div className="space-y-2">
-                      <Label htmlFor="onboarding-city" className="text-slate-700 font-medium flex items-center gap-1.5">
+                      <Label htmlFor="onboarding-city" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-primary" /> City <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <select
                           id="onboarding-city"
-                          className="w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 dark:text-slate-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           value={onboardingFields.city}
                           disabled={!onboardingFields.state}
                           onChange={(e) => {
@@ -1125,9 +1202,9 @@ export default function AuthPage() {
                             if (onboardingErrors.city) setOnboardingErrors({ ...onboardingErrors, city: "" });
                           }}
                         >
-                          <option value="">{onboardingFields.state ? "-- Select City --" : "-- Select State first --"}</option>
+                          <option value="" className="dark:bg-slate-950">{onboardingFields.state ? "-- Select City --" : "-- Select State first --"}</option>
                           {availableCities.map(c => (
-                            <option key={c} value={c}>{c}</option>
+                            <option key={c} value={c} className="dark:bg-slate-950">{c}</option>
                           ))}
                         </select>
                         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
@@ -1137,13 +1214,13 @@ export default function AuthPage() {
 
                     {/* College */}
                     <div className="space-y-2">
-                      <Label htmlFor="onboarding-college" className="text-slate-700 font-medium flex items-center gap-1.5">
+                      <Label htmlFor="onboarding-college" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                         <Building2 className="h-3.5 w-3.5 text-primary" /> College / Institution <span className="text-red-500">*</span>
                       </Label>
                       <div className="relative">
                         <select
                           id="onboarding-college"
-                          className="w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 dark:text-slate-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           value={onboardingFields.college}
                           disabled={!onboardingFields.city}
                           onChange={(e) => {
@@ -1151,9 +1228,9 @@ export default function AuthPage() {
                             if (onboardingErrors.college) setOnboardingErrors({ ...onboardingErrors, college: "" });
                           }}
                         >
-                          <option value="">{onboardingFields.city ? "-- Select College --" : "-- Select City first --"}</option>
+                          <option value="" className="dark:bg-slate-950">{onboardingFields.city ? "-- Select College --" : "-- Select City first --"}</option>
                           {availableColleges.map(c => (
-                            <option key={c.name} value={c.name}>{c.name}{c.university ? ` (${c.university})` : ""}</option>
+                            <option key={c.name} value={c.name} className="dark:bg-slate-950">{c.name}{c.university ? ` (${c.university})` : ""}</option>
                           ))}
                         </select>
                         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
@@ -1164,13 +1241,13 @@ export default function AuthPage() {
                     {/* Subject & Profession in a grid */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="onboarding-subject" className="text-slate-700 font-medium flex items-center gap-1.5">
+                        <Label htmlFor="onboarding-subject" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                           <BookOpen className="h-3.5 w-3.5 text-primary" /> Subject <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="onboarding-subject"
                           placeholder="e.g. Mathematics"
-                          className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-primary/20 h-11"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus-visible:ring-primary/20 h-11 text-foreground"
                           value={onboardingFields.subject}
                           onChange={(e) => {
                             setOnboardingFields({ ...onboardingFields, subject: e.target.value });
@@ -1180,28 +1257,28 @@ export default function AuthPage() {
                         {onboardingErrors.subject && <p className="text-red-500 text-xs">{onboardingErrors.subject}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="onboarding-profession" className="text-slate-700 font-medium flex items-center gap-1.5">
+                        <Label htmlFor="onboarding-profession" className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                           <Briefcase className="h-3.5 w-3.5 text-primary" /> Profession <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
                           <select
                             id="onboarding-profession"
-                            className="w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 appearance-none cursor-pointer"
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-11 px-3 text-sm text-slate-800 dark:text-slate-200 appearance-none cursor-pointer"
                             value={onboardingFields.profession}
                             onChange={(e) => {
                               setOnboardingFields({ ...onboardingFields, profession: e.target.value });
                               if (onboardingErrors.profession) setOnboardingErrors({ ...onboardingErrors, profession: "" });
                             }}
                           >
-                            <option value="">-- Select --</option>
-                            <option>Professor</option>
-                            <option>Associate Professor</option>
-                            <option>Assistant Professor</option>
-                            <option>Lecturer</option>
-                            <option>Teaching Assistant</option>
-                            <option>Adjunct Faculty</option>
-                            <option>Principal / HOD</option>
-                            <option>Other</option>
+                            <option value="" className="dark:bg-slate-950">-- Select --</option>
+                            <option className="dark:bg-slate-950">Professor</option>
+                            <option className="dark:bg-slate-950">Associate Professor</option>
+                            <option className="dark:bg-slate-950">Assistant Professor</option>
+                            <option className="dark:bg-slate-950">Lecturer</option>
+                            <option className="dark:bg-slate-950">Teaching Assistant</option>
+                            <option className="dark:bg-slate-950">Adjunct Faculty</option>
+                            <option className="dark:bg-slate-950">Principal / HOD</option>
+                            <option className="dark:bg-slate-950">Other</option>
                           </select>
                           <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
                         </div>
@@ -1211,14 +1288,14 @@ export default function AuthPage() {
 
                     {/* Additional Info */}
                     <div className="space-y-2">
-                      <Label htmlFor="onboarding-additional" className="text-slate-700 font-medium">
-                        About Yourself <span className="text-slate-400 font-normal text-xs">(Optional)</span>
+                      <Label htmlFor="onboarding-additional" className="text-slate-700 dark:text-slate-300 font-medium">
+                        About Yourself <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(Optional)</span>
                       </Label>
                       <textarea
                         id="onboarding-additional"
                         rows={2}
                         placeholder="Brief bio, specializations, years of experience..."
-                        className="w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 px-3 py-2.5 text-sm text-slate-800 resize-none"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-200 resize-none"
                         value={onboardingFields.additionalInfo}
                         onChange={(e) => setOnboardingFields({ ...onboardingFields, additionalInfo: e.target.value })}
                       />

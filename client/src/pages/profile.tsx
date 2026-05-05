@@ -56,23 +56,23 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-50/50">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-background dark:bg-slate-950 transition-colors duration-300">
         <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">Loading your profile...</p>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">Loading your profile...</p>
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-50/50">
-        <p className="text-slate-500 font-semibold">{error || "Profile not found"}</p>
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-background dark:bg-slate-950 transition-colors duration-300">
+        <p className="text-slate-500 dark:text-slate-400 font-semibold">{error || "Profile not found"}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-50/50 min-h-screen flex flex-col">
+    <div className="bg-background dark:bg-slate-950 min-h-screen flex flex-col transition-colors duration-300">
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -109,65 +109,64 @@ export default function ProfilePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Stats Cards */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300 h-full">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white dark:bg-slate-900 flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300 h-full border border-slate-100 dark:border-slate-800">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
                 <BookOpen className="w-8 h-8 text-primary group-hover:text-white" />
               </div>
-              <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Total Exams</p>
-              <p className="text-5xl font-black text-slate-900">{profile.totalExams}</p>
+              <p className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Exams</p>
+              <p className="text-5xl font-black text-slate-900 dark:text-slate-100">{profile.totalExams}</p>
             </Card>
           </motion.div>
 
           {/* Badges Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white overflow-hidden group hover:-translate-y-1 transition-all duration-300 h-full relative">
+           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white dark:bg-slate-900 overflow-hidden group hover:-translate-y-1 transition-all duration-300 h-full relative border border-slate-100 dark:border-slate-800">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center">
-                    <Award className="w-6 h-6 text-amber-600" />
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Award className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <h2 className="text-xl font-black text-slate-800">Badges Earned</h2>
+                  <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Badges Earned</h2>
                 </div>
                 
                 {/* Badge Tabs */}
-                <div className="flex p-1 bg-slate-100 rounded-xl w-fit">
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
                   <button 
                     onClick={() => setBadgeTimeframe("weekly")}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${badgeTimeframe === "weekly" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${badgeTimeframe === "weekly" ? "bg-white dark:bg-slate-950 text-primary shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                   >
                     Weekly
                   </button>
                   <button 
                     onClick={() => setBadgeTimeframe("monthly")}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${badgeTimeframe === "monthly" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${badgeTimeframe === "monthly" ? "bg-white dark:bg-slate-950 text-primary shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                   >
                     Monthly
                   </button>
                 </div>
               </div>
-              
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-amber-300 to-amber-500 shadow-lg shadow-amber-200 flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-amber-300 to-amber-500 shadow-lg shadow-amber-200 dark:shadow-none flex items-center justify-center mb-2">
                     <Trophy className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900">{profile.badgeCounts[badgeTimeframe].gold}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gold</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{profile.badgeCounts[badgeTimeframe].gold}</p>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Gold</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-slate-300 to-slate-400 shadow-lg shadow-slate-200 flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-slate-300 to-slate-400 shadow-lg shadow-slate-200 dark:shadow-none flex items-center justify-center mb-2">
                     <Trophy className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900">{profile.badgeCounts[badgeTimeframe].silver}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Silver</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{profile.badgeCounts[badgeTimeframe].silver}</p>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Silver</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-orange-300 to-orange-400 shadow-lg shadow-orange-200 flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-orange-300 to-orange-400 shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center mb-2">
                     <Trophy className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900">{profile.badgeCounts[badgeTimeframe].bronze}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bronze</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{profile.badgeCounts[badgeTimeframe].bronze}</p>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Bronze</p>
                 </div>
               </div>
             </Card>
@@ -175,33 +174,33 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300">
-              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="p-8 rounded-[2rem] border-0 shadow-lg bg-white dark:bg-slate-900 flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-800">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                 <BarChart className="w-8 h-8 text-amber-500 group-hover:text-white" />
               </div>
-              <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Average Score</p>
-              <p className="text-5xl font-black text-slate-900">{profile.avgScore}%</p>
+              <p className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Average Score</p>
+              <p className="text-5xl font-black text-slate-900 dark:text-slate-100">{profile.avgScore}%</p>
             </Card>
           </motion.div>
           
           <div className="flex flex-col gap-6">
-             <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2 px-2">
+             <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 px-2">
               <Brain className="w-6 h-6 text-primary" />
               Difficulty
             </h2>
             <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-emerald-50 text-center">
-                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1">Easy</p>
-                <div className="text-2xl font-black text-emerald-600">{profile.easyExams}</div>
+              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-1">Easy</p>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-500">{profile.easyExams}</div>
               </Card>
-              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-blue-50 text-center">
-                <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-1">Medium</p>
-                <div className="text-2xl font-black text-blue-600">{profile.mediumExams}</div>
+              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-blue-50 dark:bg-blue-900/20 text-center">
+                <p className="text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest mb-1">Medium</p>
+                <div className="text-2xl font-black text-blue-600 dark:text-blue-500">{profile.mediumExams}</div>
               </Card>
-              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-rose-50 text-center">
-                <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-1">Hard</p>
-                <div className="text-2xl font-black text-rose-600">{profile.hardExams}</div>
+              <Card className="p-4 rounded-3xl border-0 shadow-sm bg-rose-50 dark:bg-rose-900/20 text-center">
+                <p className="text-[10px] font-black text-rose-700 dark:text-rose-400 uppercase tracking-widest mb-1">Hard</p>
+                <div className="text-2xl font-black text-rose-600 dark:text-rose-500">{profile.hardExams}</div>
               </Card>
             </div>
           </div>

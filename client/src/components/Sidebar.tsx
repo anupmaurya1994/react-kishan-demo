@@ -12,7 +12,10 @@ import {
     GraduationCap,
     Clock,
     Trophy,
-    UserCircle
+    UserCircle,
+    ShieldCheck,
+    Users,
+    School
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,16 +42,25 @@ export default function Sidebar() {
         { name: "Settings", href: "/settings", icon: Settings },
     ];
 
-    const links = user?.role === "teacher" ? teacherLinks : studentLinks;
+    const adminLinks = [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "All Exams", href: "/exam-lists", icon: FileText },
+        { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+        { name: "Manage Teachers", href: "/admin/teachers", icon: School },
+        { name: "Manage Students", href: "/admin/students", icon: Users },
+        { name: "Settings", href: "/settings", icon: Settings },
+    ];
+
+    const links = user?.role === "admin" ? adminLinks : (user?.role === "teacher" ? teacherLinks : studentLinks);
 
     return (
         <motion.aside
             initial={false}
             animate={{ width: isCollapsed ? 80 : 260 }}
-            className="h-screen sticky top-0 bg-white border-r border-slate-200 flex flex-col z-40 transition-all duration-300 ease-in-out"
+            className="h-screen sticky top-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-40 transition-all duration-300 ease-in-out"
         >
             {/* Logo Section */}
-            <div className="p-6 flex items-center justify-between border-b border-slate-50">
+            <div className="p-6 flex items-center justify-between border-b border-slate-50 dark:border-slate-800">
                 <Link href="/dashboard">
                     <div className="flex items-center gap-3 cursor-pointer">
                         <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
@@ -58,7 +70,7 @@ export default function Sidebar() {
                             <motion.span
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-xl font-black tracking-tight text-slate-900"
+                                className="text-xl font-black tracking-tight text-slate-900 dark:text-white"
                             >
                                 ExamAI
                             </motion.span>
@@ -79,7 +91,7 @@ export default function Sidebar() {
                                 group flex items-center gap-3 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200
                                 ${isActive
                                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-primary'}
+                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary dark:hover:text-primary'}
                             `}>
                                 <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'}`} />
                                 {!isCollapsed && (
@@ -104,11 +116,11 @@ export default function Sidebar() {
             </nav>
 
             {/* Bottom Section */}
-            <div className="p-4 border-t border-slate-50 space-y-2">
+            <div className="p-4 border-t border-slate-50 dark:border-slate-800 space-y-2">
                 <Button
                     variant="ghost"
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="w-full justify-start gap-3 rounded-2xl h-12 text-slate-400 hover:text-primary hover:bg-primary/5"
+                    className="w-full justify-start gap-3 rounded-2xl h-12 text-slate-400 dark:text-slate-500 hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
                 >
                     {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
                     {!isCollapsed && <span className="font-bold text-sm">Collapse Sidebar</span>}
@@ -117,7 +129,7 @@ export default function Sidebar() {
                 <Button
                     variant="ghost"
                     onClick={() => logout()}
-                    className="w-full justify-start gap-3 rounded-2xl h-12 text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                    className="w-full justify-start gap-3 rounded-2xl h-12 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
                 >
                     <LogOut className="h-5 w-5" />
                     {!isCollapsed && <span className="font-bold text-sm">Logout</span>}

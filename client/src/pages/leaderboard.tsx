@@ -143,9 +143,9 @@ export default function LeaderboardPage() {
     const percentDiff = theirVal > 0 ? Math.round(Math.abs(diff) / theirVal * 100) : (myVal > 0 ? 100 : 0);
 
     return (
-      <div className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+      <div className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
         <div className="w-1/3 text-left">
-          <span className="font-bold text-slate-800 text-lg">{myVal}</span>
+          <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">{myVal}</span>
         </div>
         <div className="w-1/3 text-center flex flex-col items-center">
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{label}</span>
@@ -155,30 +155,30 @@ export default function LeaderboardPage() {
               {percentDiff}% {isBetter ? 'higher' : 'lower'}
             </span>
           )}
-          {isSame && <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md mt-0.5">EQUAL</span>}
+          {isSame && <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md mt-0.5">EQUAL</span>}
         </div>
         <div className="w-1/3 text-right">
-          <span className="font-bold text-slate-800 text-lg">{theirVal}</span>
+          <span className="font-bold text-slate-800 dark:text-slate-100 text-lg">{theirVal}</span>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="bg-slate-50/50 min-h-screen flex flex-col">
+    <div className="bg-background dark:bg-slate-950 min-h-screen flex flex-col transition-colors duration-300">
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-amber-100 rounded-xl">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
                 <Trophy className="w-8 h-8 text-amber-500" />
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                 Leaderboard
               </h1>
             </div>
-            <p className="text-slate-500 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
               {timeframe === "weekly" 
                 ? "Rankings reset every Monday at 5:30 AM. Top students win exclusive badges!" 
                 : timeframe === "monthly" 
@@ -189,22 +189,22 @@ export default function LeaderboardPage() {
 
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
              {/* Timeframe Switcher */}
-            <div className="flex p-1 bg-white rounded-2xl border border-slate-200 shadow-sm w-full sm:w-auto">
-              <button
+            <div className="flex p-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm w-full sm:w-auto">
+               <button
                 onClick={() => setTimeframe("weekly")}
-                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "weekly" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "weekly" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setTimeframe("monthly")}
-                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "monthly" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "monthly" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setTimeframe("overall")}
-                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "overall" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${timeframe === "overall" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
               >
                 Overall
               </button>
@@ -217,7 +217,7 @@ export default function LeaderboardPage() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 outline-none transition-all"
+                className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 dark:text-slate-200 outline-none transition-all"
               />
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function LeaderboardPage() {
                   <Trophy className="w-32 h-32" />
                 </div>
                 <div className="flex items-center gap-4 relative z-10">
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex flex-col items-center justify-center border border-white/30">
+                  <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                     <span className="text-[10px] font-black uppercase leading-none opacity-80">Rank</span>
                     <span className="text-2xl font-black leading-none mt-1">#{myEntry.rank}</span>
                   </div>
@@ -306,14 +306,14 @@ export default function LeaderboardPage() {
                       </motion.div>
                     </div>
                     <Card 
-                      className="border-0 shadow-lg bg-white relative pt-8 pb-6 flex flex-col items-center rounded-3xl cursor-pointer hover:-translate-y-2 transition-transform duration-300 border-2 border-slate-50"
+                      className="border-0 shadow-lg bg-white dark:bg-slate-900 relative pt-8 pb-6 flex flex-col items-center rounded-3xl cursor-pointer hover:-translate-y-2 transition-transform duration-300 border-2 border-slate-50 dark:border-slate-800"
                       onClick={() => openStudentProfile(top3[1].studentId, top3[1].name)}
                     >
                       <div className="absolute -top-6 bg-slate-100 text-slate-500 w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-md border-4 border-white">2</div>
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-2 font-black text-slate-300 text-2xl border-2 border-white shadow-inner">
                         {top3[1].name.charAt(0)}
                       </div>
-                      <h3 className="font-bold text-slate-800 text-center text-sm md:text-base line-clamp-1 px-2 hover:text-primary transition-colors">{top3[1].name}</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-sm md:text-base line-clamp-1 px-2 hover:text-primary transition-colors">{top3[1].name}</h3>
                       <p className="text-primary font-black mt-1">{Math.round(top3[1].totalPoints).toLocaleString()} pts</p>
                       <div className="mt-2 bg-slate-500/10 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">Rising Star</div>
                     </Card>
@@ -332,7 +332,7 @@ export default function LeaderboardPage() {
                       </motion.div>
                     </div>
                     <Card 
-                      className="border-0 shadow-2xl bg-gradient-to-t from-amber-50 to-white relative pt-12 pb-10 flex flex-col items-center rounded-3xl transform scale-110 border-2 border-amber-100 cursor-pointer hover:scale-115 transition-transform duration-300"
+                      className="border-0 shadow-2xl bg-gradient-to-t from-amber-50 to-white dark:from-slate-900 dark:to-slate-900 relative pt-12 pb-10 flex flex-col items-center rounded-3xl transform scale-110 border-2 border-amber-100 dark:border-amber-900/50 cursor-pointer hover:scale-115 transition-transform duration-300"
                       onClick={() => openStudentProfile(top3[0].studentId, top3[0].name)}
                     >
                       <div className="absolute -top-8 bg-amber-400 text-white w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white">
@@ -341,7 +341,7 @@ export default function LeaderboardPage() {
                       <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mb-3 font-black text-amber-600 text-3xl border-2 border-white shadow-inner">
                         {top3[0].name.charAt(0)}
                       </div>
-                      <h3 className="font-black text-slate-900 text-center text-base md:text-lg line-clamp-1 px-2 hover:text-amber-600 transition-colors">{top3[0].name}</h3>
+                      <h3 className="font-black text-slate-900 dark:text-slate-100 text-center text-base md:text-lg line-clamp-1 px-2 hover:text-amber-600 transition-colors">{top3[0].name}</h3>
                       <p className="text-amber-600 font-black mt-1 text-xl">{Math.round(top3[0].totalPoints).toLocaleString()} pts</p>
                       <div className="mt-2 bg-amber-500/10 px-3 py-1 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-widest">Platform King</div>
                     </Card>
@@ -360,14 +360,14 @@ export default function LeaderboardPage() {
                       </motion.div>
                     </div>
                     <Card 
-                      className="border-0 shadow-lg bg-white relative pt-8 pb-6 flex flex-col items-center rounded-3xl cursor-pointer hover:-translate-y-2 transition-transform duration-300 border-2 border-orange-50"
+                      className="border-0 shadow-lg bg-white dark:bg-slate-900 relative pt-8 pb-6 flex flex-col items-center rounded-3xl cursor-pointer hover:-translate-y-2 transition-transform duration-300 border-2 border-orange-50 dark:border-slate-800"
                       onClick={() => openStudentProfile(top3[2].studentId, top3[2].name)}
                     >
                       <div className="absolute -top-6 bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-md border-4 border-white">3</div>
                       <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-2 font-black text-orange-200 text-2xl border-2 border-white shadow-inner">
                         {top3[2].name.charAt(0)}
                       </div>
-                      <h3 className="font-bold text-slate-800 text-center text-sm md:text-base line-clamp-1 px-2 hover:text-orange-600 transition-colors">{top3[2].name}</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center text-sm md:text-base line-clamp-1 px-2 hover:text-orange-600 transition-colors">{top3[2].name}</h3>
                       <p className="text-orange-600 font-black mt-1">{Math.round(top3[2].totalPoints).toLocaleString()} pts</p>
                       <div className="mt-2 bg-orange-500/10 px-3 py-1 rounded-full text-[10px] font-black text-orange-600 uppercase tracking-widest">Elite Contender</div>
                     </Card>
@@ -378,8 +378,8 @@ export default function LeaderboardPage() {
 
             {/* List — #4 and beyond */}
             {rest.length > 0 && (
-              <div className="bg-white rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
-                <div className="hidden md:grid grid-cols-12 gap-4 p-6 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">
+              <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="hidden md:grid grid-cols-12 gap-4 p-6 border-b border-slate-100 dark:border-slate-800 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50/30 dark:bg-slate-950/30">
                   <div className="col-span-1 text-center">Rank</div>
                   <div className="col-span-5">Student Performance</div>
                   <div className="col-span-2 text-center">Activity</div>
@@ -387,7 +387,7 @@ export default function LeaderboardPage() {
                   <div className="col-span-2 text-right pr-4">Total Points</div>
                 </div>
 
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {rest.map((student) => {
                     const me = isMe(student.studentId, student.name);
                     return (
@@ -396,33 +396,33 @@ export default function LeaderboardPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         onClick={() => openStudentProfile(student.studentId, student.name)}
-                        className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 md:p-6 items-center transition-all cursor-pointer hover:bg-slate-50/80 ${me ? 'bg-primary/5' : ''}`}
+                        className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 md:p-6 items-center transition-all cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 ${me ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
                       >
                         {/* Mobile view */}
                         <div className="flex md:hidden items-center justify-between w-full">
                           <div className="flex items-center gap-3">
-                            <div className="font-black text-lg text-slate-300 w-8">#{student.rank}</div>
+                            <div className="font-black text-lg text-slate-300 dark:text-slate-700 w-8">#{student.rank}</div>
                             <div>
-                              <p className={`font-bold hover:underline ${me ? 'text-primary' : 'text-slate-800'}`}>
+                              <p className={`font-bold hover:underline ${me ? 'text-primary' : 'text-slate-800 dark:text-slate-200'}`}>
                                 {student.name} {me && <span className="text-[10px] bg-primary/10 px-2 py-0.5 rounded-full ml-1 uppercase">Me</span>}
                               </p>
                               <p className="text-xs text-slate-500 font-medium">{student.examsTaken} Exams • {Math.round(student.avgScore)}%</p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={`font-black text-lg ${me ? 'text-primary' : 'text-slate-900'}`}>{student.totalPoints.toLocaleString()}</p>
+                            <p className={`font-black text-lg ${me ? 'text-primary' : 'text-slate-900 dark:text-slate-100'}`}>{student.totalPoints.toLocaleString()}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase">PTS</p>
                           </div>
                         </div>
 
                         {/* Desktop view */}
-                        <div className="hidden md:block col-span-1 text-center font-black text-slate-300 text-xl">#{student.rank}</div>
+                        <div className="hidden md:block col-span-1 text-center font-black text-slate-300 dark:text-slate-700 text-xl">#{student.rank}</div>
                         <div className="hidden md:flex col-span-5 items-center gap-4">
-                          <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-slate-400 dark:text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                             {student.name.charAt(0)}
                           </div>
                           <div>
-                            <p className={`font-bold text-base hover:underline ${me ? 'text-primary' : 'text-slate-800'}`}>
+                            <p className={`font-bold text-base hover:underline ${me ? 'text-primary' : 'text-slate-800 dark:text-slate-200'}`}>
                               {student.name}
                             </p>
                             <div className="flex gap-2 items-center mt-0.5">
@@ -433,15 +433,15 @@ export default function LeaderboardPage() {
                           </div>
                         </div>
                         <div className="hidden md:block col-span-2 text-center">
-                          <p className="font-bold text-slate-600">{student.examsTaken}</p>
+                          <p className="font-bold text-slate-600 dark:text-slate-400">{student.examsTaken}</p>
                           <p className="text-[9px] text-slate-400 font-black uppercase">Exams</p>
                         </div>
                         <div className="hidden md:block col-span-2 text-center">
-                          <p className="font-bold text-slate-600">{Math.round(student.avgScore)}%</p>
+                          <p className="font-bold text-slate-600 dark:text-slate-400">{Math.round(student.avgScore)}%</p>
                           <p className="text-[9px] text-slate-400 font-black uppercase">Average</p>
                         </div>
                         <div className="hidden md:block col-span-2 text-right pr-4">
-                          <p className={`font-black text-xl ${me ? 'text-primary' : 'text-slate-900'}`}>{Math.round(student.totalPoints).toLocaleString()}</p>
+                          <p className={`font-black text-xl ${me ? 'text-primary' : 'text-slate-900 dark:text-slate-100'}`}>{Math.round(student.totalPoints).toLocaleString()}</p>
                           <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Points</p>
                         </div>
                       </motion.div>
@@ -452,7 +452,7 @@ export default function LeaderboardPage() {
             )}
 
             {rest.length === 0 && searchQuery && (
-              <div className="p-16 text-center bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <div className="p-16 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <Search className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                 <p className="text-slate-500 font-bold text-lg">No students found matching "{searchQuery}"</p>
                 <p className="text-slate-400 text-sm mt-1">Try a different name or clear the search.</p>
@@ -464,7 +464,7 @@ export default function LeaderboardPage() {
 
       {/* Profile Modal */}
       <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-2xl p-0 overflow-hidden bg-slate-50 border-0 rounded-[2.5rem]">
+        <DialogContent className="sm:max-w-md md:max-w-2xl p-0 overflow-hidden bg-slate-50 dark:bg-slate-950 border-0 rounded-[2.5rem] dark:border dark:border-slate-800">
           {profileLoading ? (
             <div className="flex flex-col items-center justify-center p-16">
               <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
@@ -515,47 +515,47 @@ export default function LeaderboardPage() {
                       exit={{ opacity: 0, x: -20 }}
                       className="space-y-6"
                     >
-                      <div className="grid grid-cols-2 gap-4">
-                        <Card className="p-6 rounded-[2rem] border-0 shadow-sm bg-white flex flex-col items-center text-center">
+                       <div className="grid grid-cols-2 gap-4">
+                        <Card className="p-6 rounded-[2rem] border-0 shadow-sm bg-white dark:bg-slate-900 flex flex-col items-center text-center">
                           <BookOpen className="w-8 h-8 text-primary mb-3" />
                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Exams</p>
-                          <p className="text-4xl font-black text-slate-900">{studentProfile.totalExams}</p>
+                          <p className="text-4xl font-black text-slate-900 dark:text-slate-100">{studentProfile.totalExams}</p>
                         </Card>
-                        <Card className="p-6 rounded-[2rem] border-0 shadow-sm bg-white flex flex-col items-center text-center">
+                        <Card className="p-6 rounded-[2rem] border-0 shadow-sm bg-white dark:bg-slate-900 flex flex-col items-center text-center">
                           <BarChart className="w-8 h-8 text-amber-500 mb-3" />
                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Average Score</p>
-                          <p className="text-4xl font-black text-slate-900">{studentProfile.avgScore}%</p>
+                          <p className="text-4xl font-black text-slate-900 dark:text-slate-100">{studentProfile.avgScore}%</p>
                         </Card>
                       </div>
 
-                      <div className="p-6 rounded-[2rem] border-0 shadow-sm bg-white">
+                      <div className="p-6 rounded-[2rem] border-0 shadow-sm bg-white dark:bg-slate-900">
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                           <Award className="w-4 h-4 text-amber-500" /> Badges Earned
                         </p>
                         <div className="flex justify-around items-center">
                           <div className="flex flex-col items-center">
-                            <div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-100 mb-2">
+                             <div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-100 dark:shadow-none mb-2">
                               <Trophy className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-black text-slate-900">
+                            <span className="text-xl font-black text-slate-900 dark:text-slate-100">
                               {(studentProfile.badgeCounts?.monthly?.gold || 0) + (studentProfile.badgeCounts?.weekly?.gold || 0)}
                             </span>
                             <span className="text-[9px] font-black text-slate-400 uppercase">Gold</span>
                           </div>
                           <div className="flex flex-col items-center">
-                            <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center shadow-lg shadow-slate-100 mb-2">
+                             <div className="w-10 h-10 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center shadow-lg shadow-slate-100 dark:shadow-none mb-2">
                               <Trophy className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-black text-slate-900">
+                            <span className="text-xl font-black text-slate-900 dark:text-slate-100">
                               {(studentProfile.badgeCounts?.monthly?.silver || 0) + (studentProfile.badgeCounts?.weekly?.silver || 0)}
                             </span>
                             <span className="text-[9px] font-black text-slate-400 uppercase">Silver</span>
                           </div>
                           <div className="flex flex-col items-center">
-                            <div className="w-10 h-10 rounded-full bg-orange-400 flex items-center justify-center shadow-lg shadow-orange-100 mb-2">
+                             <div className="w-10 h-10 rounded-full bg-orange-400 dark:bg-orange-900/50 flex items-center justify-center shadow-lg shadow-orange-100 dark:shadow-none mb-2">
                               <Trophy className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-black text-slate-900">
+                            <span className="text-xl font-black text-slate-900 dark:text-slate-100">
                               {(studentProfile.badgeCounts?.monthly?.bronze || 0) + (studentProfile.badgeCounts?.weekly?.bronze || 0)}
                             </span>
                             <span className="text-[9px] font-black text-slate-400 uppercase">Bronze</span>
@@ -563,21 +563,21 @@ export default function LeaderboardPage() {
                         </div>
                       </div>
 
-                      <h3 className="font-black text-slate-800 text-lg flex items-center gap-2 px-2">
+                      <h3 className="font-black text-slate-800 dark:text-slate-200 text-lg flex items-center gap-2 px-2">
                         <Brain className="w-5 h-5 text-primary" /> Difficulty Breakdown
                       </h3>
                       <div className="grid grid-cols-3 gap-4">
-                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-emerald-50 text-center">
-                          <div className="text-emerald-700 font-bold mb-2">Easy</div>
-                          <div className="text-3xl font-black text-emerald-600">{studentProfile.easyExams}</div>
+                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                          <div className="text-emerald-700 dark:text-emerald-400 font-bold mb-2">Easy</div>
+                          <div className="text-3xl font-black text-emerald-600 dark:text-emerald-500">{studentProfile.easyExams}</div>
                         </Card>
-                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-blue-50 text-center">
-                          <div className="text-blue-700 font-bold mb-2">Medium</div>
-                          <div className="text-3xl font-black text-blue-600">{studentProfile.mediumExams}</div>
+                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-blue-50 dark:bg-blue-900/20 text-center">
+                          <div className="text-blue-700 dark:text-blue-400 font-bold mb-2">Medium</div>
+                          <div className="text-3xl font-black text-blue-600 dark:text-blue-500">{studentProfile.mediumExams}</div>
                         </Card>
-                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-rose-50 text-center">
-                          <div className="text-rose-700 font-bold mb-2">Hard</div>
-                          <div className="text-3xl font-black text-rose-600">{studentProfile.hardExams}</div>
+                        <Card className="p-4 rounded-2xl border-0 shadow-sm bg-rose-50 dark:bg-rose-900/20 text-center">
+                          <div className="text-rose-700 dark:text-rose-400 font-bold mb-2">Hard</div>
+                          <div className="text-3xl font-black text-rose-600 dark:text-rose-500">{studentProfile.hardExams}</div>
                         </Card>
                       </div>
                     </motion.div>
@@ -586,7 +586,7 @@ export default function LeaderboardPage() {
                       key="compare-view"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="bg-white rounded-[2rem] p-4 shadow-sm"
+                      className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-4 shadow-sm"
                     >
                       {myProfileLoading ? (
                         <div className="flex flex-col items-center justify-center p-12">
@@ -595,10 +595,10 @@ export default function LeaderboardPage() {
                         </div>
                       ) : myProfile && (
                         <>
-                          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div className="text-left w-1/3">
-                              <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md">You</span>
-                              <p className="font-bold text-slate-800 mt-2 truncate">{myProfile.name}</p>
+                              <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">You</span>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-2 truncate">{myProfile.name}</p>
                               <div className="flex gap-2 mt-1">
                                 <Trophy className="w-3 h-3 text-amber-500" /> <span className="text-[10px] font-bold">{(myProfile.badgeCounts?.weekly?.gold || 0) + (myProfile.badgeCounts?.monthly?.gold || 0)}</span>
                                 <Trophy className="w-3 h-3 text-slate-400" /> <span className="text-[10px] font-bold">{(myProfile.badgeCounts?.weekly?.silver || 0) + (myProfile.badgeCounts?.monthly?.silver || 0)}</span>
@@ -609,8 +609,8 @@ export default function LeaderboardPage() {
                               <Scale className="w-6 h-6 text-slate-300 mx-auto" />
                             </div>
                             <div className="text-right w-1/3">
-                              <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-1 rounded-md">Them</span>
-                              <p className="font-bold text-slate-800 mt-2 truncate">{studentProfile.name}</p>
+                              <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Them</span>
+                              <p className="font-bold text-slate-800 dark:text-slate-200 mt-2 truncate">{studentProfile.name}</p>
                               <div className="flex gap-2 mt-1 justify-end">
                                 <Trophy className="w-3 h-3 text-amber-500" /> <span className="text-[10px] font-bold">{(studentProfile.badgeCounts?.weekly?.gold || 0) + (studentProfile.badgeCounts?.monthly?.gold || 0)}</span>
                                 <Trophy className="w-3 h-3 text-slate-400" /> <span className="text-[10px] font-bold">{(studentProfile.badgeCounts?.weekly?.silver || 0) + (studentProfile.badgeCounts?.monthly?.silver || 0)}</span>

@@ -126,27 +126,52 @@ export default function QuestionsListPage() {
     ? paginatedData.data
     : (examData?.questions || []).slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  // Fetch full exam details from server (to avoid relying solely on sessionStorage)
+  const { data: serverExamData } = useQuery({
+    queryKey: [`/api/exams/${id}`],
+    queryFn: async () => {
+      if (id === "demo-id" || serverSyncFailed) return null;
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/exams/${id}`, {
+        headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+      });
+      if (!res.ok) return null;
+      const result = await res.json();
+      return result.data;
+    },
+    enabled: !!id && id !== "demo-id" && !serverSyncFailed,
+  });
+
   useEffect(() => {
+    // Priority: 1. Server Data, 2. Session Storage
+    if (serverExamData) {
+      setExamData(serverExamData);
+      sessionStorage.setItem("current_exam_data", JSON.stringify(serverExamData));
+      
+      if (serverExamData.status?.toUpperCase() === "PUBLISHED") {
+        setIsPublishedExam(true);
+        setPublishStatus("Published");
+      } else {
+        setPublishStatus(serverExamData.status || "Draft");
+      }
+      return;
+    }
+
     const savedData = sessionStorage.getItem("current_exam_data");
     if (savedData) {
       const parsed = JSON.parse(savedData);
       setExamData(parsed);
-      // Lock in the original published state — never changes even if status goes to PROCESSING
       if (parsed.status?.toUpperCase() === "PUBLISHED") {
         setIsPublishedExam(true);
       }
-      if (parsed.status === "PROCESSING") {
-        setPublishStatus("Processing");
-      } else if (parsed.status === "PUBLISHED") {
-        setPublishStatus("Published");
-      } else {
-        setPublishStatus(parsed.status || "Draft");
-      }
+      setPublishStatus(parsed.status === "PROCESSING" ? "Processing" : (parsed.status === "PUBLISHED" ? "Published" : (parsed.status || "Draft")));
+    } else if (id !== "demo-id") {
+      // If no session data and not a demo, we rely on the serverExamData query which is running
     } else {
       toast.error("No exam data found. Redirecting...");
       setLocation("/create-exam");
     }
-  }, [setLocation]);
+  }, [serverExamData, id, setLocation]);
 
   // Status Polling Query
   const { data: statusData } = useQuery({
@@ -389,7 +414,7 @@ export default function QuestionsListPage() {
       text: "",
       marks: 1,
       options: ["", "", "", ""],
-      correctAnswer: 0,
+      correctAnswer: -1,
       answer: "",
       type: "MCQ",
       difficulty: "medium",
@@ -400,15 +425,39 @@ export default function QuestionsListPage() {
     setSelectedQuestion(newQuestion);
   };
 
-  const handleSaveNewQuestion = (newQ: any) => {
-    const updatedQuestions = [...(examData?.questions || []), newQ];
-    const updatedData = { ...examData, questions: updatedQuestions };
+  const handleSaveNewQuestion = async (newQ: any) => {
+    try {
+      let savedQuestion = newQ;
+      
+      if (!serverSyncFailed) {
+        const response = await apiRequest("POST", `/api/exams/${id}/questions/manual`, newQ);
+        if (response.success && response.data) {
+          savedQuestion = response.data;
+          // Invalidate to get fresh count and data
+          await queryClient.invalidateQueries({ queryKey: [`/api/exams/${id}/questions`] });
+          
+          // Calculate if we need to move to the last page
+          const newTotal = totalItems + 1;
+          const lastPage = Math.ceil(newTotal / pageSize);
+          if (lastPage > currentPage) {
+            setCurrentPage(lastPage);
+          }
+        }
+      }
 
-    setExamData(updatedData);
-    sessionStorage.setItem("current_exam_data", JSON.stringify(updatedData));
+      // Update local fallback state
+      const updatedQuestions = [...(examData?.questions || []), savedQuestion];
+      const updatedData = { ...examData, questions: updatedQuestions };
 
-    setSelectedQuestion(null);
-    toast.success("Question added successfully");
+      setExamData(updatedData);
+      sessionStorage.setItem("current_exam_data", JSON.stringify(updatedData));
+
+      setSelectedQuestion(null);
+      toast.success("Question added successfully! Moved to last page.");
+    } catch (error: any) {
+      console.error("Failed to add manual question:", error);
+      toast.error(error.message || "Failed to save question to server");
+    }
   };
 
   const handleUpdateQuestion = async (updatedQ: any) => {
@@ -436,51 +485,51 @@ export default function QuestionsListPage() {
 
   return (
     <>
-      <div className="bg-slate-100 flex flex-col font-inter">
+      <div className="bg-background dark:bg-slate-950 flex flex-col font-inter min-h-screen transition-colors duration-300">
 
         {/* EXAM INFO CARD */}
         <div className="container mx-auto px-6 py-6">
           <Button
             variant="ghost"
             onClick={() => setLocation("/dashboard")}
-            className="mb-4 text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
+            className="mb-4 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
 
-          <Card className="p-8 rounded-3xl shadow-xl bg-white/80 backdrop-blur-sm mb-8 border-0 relative overflow-hidden group">
+          <Card className="p-8 rounded-3xl shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-8 border-0 dark:border dark:border-slate-800/50 relative overflow-hidden group">
             {/* Decorative background element */}
             <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500" />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
               <div className="space-y-6 flex-1 w-full">
                 <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2.5 rounded-2xl group-hover:scale-110 transition-transform duration-500">
+                  <div className="bg-primary/10 dark:bg-primary/20 p-2.5 rounded-2xl group-hover:scale-110 transition-transform duration-500">
                     <GraduationCap className="h-6 w-6 text-primary" />
                   </div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight capitalize">
+                  <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 tracking-tight capitalize">
                     {examData.title}
                   </h1>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 hover:border-primary/20 hover:bg-white transition-all duration-300">
-                    <div className="bg-blue-100/50 p-2 rounded-xl">
-                      <BookOpen className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-4 bg-slate-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 hover:border-primary/20 hover:bg-white dark:hover:bg-slate-900/40 transition-all duration-300">
+                    <div className="bg-blue-100/50 dark:bg-blue-900/30 p-2 rounded-xl">
+                      <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex flex-col text-left">
-                      <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Subject</span>
-                      <span className="font-semibold text-slate-700 capitalize">{examData.subject}</span>
+                      <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">Subject</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-100 capitalize">{examData.subject}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 hover:border-primary/20 hover:bg-white transition-all duration-300">
-                    <div className="bg-amber-100/50 p-2 rounded-xl">
-                      <Clock className="h-5 w-5 text-amber-600" />
+                  <div className="flex items-center gap-4 bg-slate-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 hover:border-primary/20 hover:bg-white dark:hover:bg-slate-900/40 transition-all duration-300">
+                    <div className="bg-amber-100/50 dark:bg-amber-900/30 p-2 rounded-xl">
+                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="flex flex-col text-left">
-                      <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Timing Type</span>
+                      <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">Timing Type</span>
                       <Select
                         value={examData.timeLimitType || "overall"}
                         onValueChange={(val) => {
@@ -489,12 +538,12 @@ export default function QuestionsListPage() {
                           sessionStorage.setItem("current_exam_data", JSON.stringify(updated));
                         }}
                       >
-                        <SelectTrigger className="h-6 border-none bg-transparent p-0 font-semibold text-slate-700 focus:ring-0 hover:text-primary transition-colors">
+                        <SelectTrigger className="h-6 border-none bg-transparent p-0 font-semibold text-slate-700 dark:text-slate-100 focus:ring-0 hover:text-primary transition-colors">
                           <SelectValue>
                             {examData.timeLimit} {examData.timeLimitType === 'per-question' ? 'Min / Question' : 'Minutes Total'}
                           </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl border-slate-200">
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-popover dark:bg-slate-950/95 backdrop-blur-xl">
                           <SelectItem value="overall">{examData.timeLimit} Minutes Total</SelectItem>
                           <SelectItem value="per-question">{examData.timeLimit} Min / Question</SelectItem>
                         </SelectContent>
@@ -502,13 +551,13 @@ export default function QuestionsListPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 hover:border-primary/20 hover:bg-white transition-all duration-300">
-                    <div className="bg-purple-100/50 p-2 rounded-xl">
-                      <Tags className="h-5 w-5 text-purple-600" />
+                  <div className="flex items-center gap-4 bg-slate-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 hover:border-primary/20 hover:bg-white dark:hover:bg-slate-900/40 transition-all duration-300">
+                    <div className="bg-purple-100/50 dark:bg-purple-900/30 p-2 rounded-xl">
+                      <Tags className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="flex flex-col text-left">
-                      <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Topics</span>
-                      <span className="font-semibold text-slate-700 truncate max-w-[150px]" title={examData.topics}>{examData.topics}</span>
+                      <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">Topics</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-100 truncate max-w-[150px]" title={examData.topics}>{examData.topics}</span>
                     </div>
                   </div>
                 </div>
@@ -516,7 +565,7 @@ export default function QuestionsListPage() {
 
               <Button
                 variant="outline"
-                className="group/btn h-12 px-6 rounded-2xl border-slate-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-sm active:scale-95 shrink-0"
+                className="group/btn h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-800/80 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 shadow-sm active:scale-95 shrink-0 bg-white dark:bg-slate-950/50 text-slate-700 dark:text-slate-100 font-bold"
                 onClick={() => {
                   if (examData) {
                     sessionStorage.setItem("current_exam_data", JSON.stringify({
@@ -529,8 +578,8 @@ export default function QuestionsListPage() {
                   setLocation("/create-exam");
                 }}
               >
-                <Edit3 className="h-4 w-4 mr-2 text-slate-400 group-hover/btn:text-primary transition-colors" />
-                <span className="font-semibold">Edit Exam Info</span>
+                <Edit3 className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500 group-hover/btn:text-primary transition-colors" />
+                <span>Edit Exam Info</span>
               </Button>
             </div>
           </Card>
@@ -571,11 +620,11 @@ export default function QuestionsListPage() {
           open={!!selectedQuestion}
           onOpenChange={() => setSelectedQuestion(null)}
         >
-          <SheetContent className="w-[500px] overflow-y-auto">
+          <SheetContent className="w-[500px] overflow-y-auto bg-background dark:bg-slate-950 border-slate-200 dark:border-slate-800">
             {selectedQuestion && (
               <div className="py-6 space-y-6">
                 <SheetHeader>
-                  <SheetTitle className="text-xl font-bold">
+                  <SheetTitle className="text-xl font-bold text-foreground">
                     Edit Question {selectedQuestion.id}
                   </SheetTitle>
                 </SheetHeader>
@@ -583,7 +632,7 @@ export default function QuestionsListPage() {
                 <div className="space-y-4">
 
                   <div>
-                    <Label>Question Text</Label>
+                    <Label className="text-slate-700 dark:text-slate-300">Question Text</Label>
                     <Textarea
                       value={selectedQuestion.text}
                       onChange={(e) =>
@@ -592,12 +641,12 @@ export default function QuestionsListPage() {
                           text: e.target.value,
                         })
                       }
-                      className="min-h-[120px]"
+                      className="min-h-[120px] bg-background dark:bg-slate-900/50 border-slate-200 dark:border-slate-800"
                     />
                   </div>
 
                   <div>
-                    <Label>Options</Label>
+                    <Label className="text-slate-700 dark:text-slate-300">Options</Label>
                     {selectedQuestion.options?.map((opt: string, i: number) => (
                       <div key={i} className="flex gap-2 mt-2">
                         <Input
@@ -610,6 +659,7 @@ export default function QuestionsListPage() {
                               options: newOpts,
                             });
                           }}
+                          className="bg-background dark:bg-slate-900/50 border-slate-200 dark:border-slate-800"
                         />
                         <Button
                           variant={
@@ -617,6 +667,7 @@ export default function QuestionsListPage() {
                               ? "default"
                               : "outline"
                           }
+                          className={i === selectedQuestion.correctAnswer ? "bg-emerald-600 hover:bg-emerald-700" : ""}
                           onClick={() =>
                             setSelectedQuestion({
                               ...selectedQuestion,
@@ -625,7 +676,7 @@ export default function QuestionsListPage() {
                             })
                           }
                         >
-                          Correct
+                          {i === selectedQuestion.correctAnswer ? "Correct" : "Mark"}
                         </Button>
                       </div>
                     ))}
@@ -643,6 +694,7 @@ export default function QuestionsListPage() {
                             marks: parseInt(e.target.value),
                           })
                         }
+                        className="bg-background dark:bg-slate-900/50 border-slate-200 dark:border-slate-800"
                       />
                     </div>
 
@@ -657,7 +709,7 @@ export default function QuestionsListPage() {
                           })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-background dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -672,7 +724,18 @@ export default function QuestionsListPage() {
                   <Button
                     className="w-full mt-4"
                     onClick={() => {
-                      const exists = examData.questions.some(
+                      // Validation
+                      if (!selectedQuestion.text?.trim()) {
+                        return toast.error("Please enter the question text");
+                      }
+                      if (selectedQuestion.options?.some((opt: string) => !opt?.trim())) {
+                        return toast.error("Please fill in all 4 options");
+                      }
+                      if (selectedQuestion.correctAnswer === -1 || selectedQuestion.correctAnswer === undefined) {
+                        return toast.error("Please select the correct answer");
+                      }
+
+                      const exists = (examData?.questions || []).some(
                         (q: any) => q.id === selectedQuestion.id
                       );
 
@@ -683,7 +746,7 @@ export default function QuestionsListPage() {
                       }
                     }}
                   >
-                    {examData.questions.some((q: any) => q.id === selectedQuestion.id)
+                    {(examData?.questions || []).some((q: any) => q.id === selectedQuestion.id)
                       ? "Save Changes"
                       : "Add Question"}
                   </Button>

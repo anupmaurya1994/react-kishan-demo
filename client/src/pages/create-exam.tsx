@@ -447,7 +447,7 @@ export default function CreateExam() {
 
   return (
     <>
-      <div className="bg-slate-50/50 flex flex-col font-inter">
+      <div className="bg-background flex flex-col font-inter transition-colors duration-300">
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-4">
@@ -455,7 +455,7 @@ export default function CreateExam() {
               variant="ghost"
               type="button"
               onClick={() => setLocation("/dashboard")}
-              className="text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
+              className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors"
             >
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -477,10 +477,10 @@ export default function CreateExam() {
           <form onSubmit={handleSubmit(handleGenerate)} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Form Section */}
             <div className={`${showQuestions ? 'lg:col-span-4' : 'lg:col-span-8 lg:col-start-3'} space-y-6 transition-all duration-500`}>
-              <Card className="border-0 shadow-sm overflow-hidden">
-                <CardHeader className="bg-white border-b border-slate-100">
-                  <CardTitle className="text-xl font-bold">Exam Details</CardTitle>
-                  <CardDescription>Configure your exam parameters and upload source materials.</CardDescription>
+              <Card className="border-0 shadow-sm overflow-hidden bg-card dark:bg-slate-900/50 dark:border dark:border-slate-800/50">
+                <CardHeader className="bg-white dark:bg-slate-900/80 border-b border-slate-100 dark:border-slate-800">
+                  <CardTitle className="text-xl font-bold text-foreground">Exam Details</CardTitle>
+                  <CardDescription className="text-muted-foreground">Configure your exam parameters and upload source materials.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6 space-y-5">
                   <div className="space-y-2">
@@ -488,7 +488,7 @@ export default function CreateExam() {
                     <Input
                       {...register("title")}
                       placeholder="e.g. Midterm Biology 101"
-                      className={`rounded-xl ${errors.title ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.title ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       data-testid="input-exam-title"
                     />
                     {errors.title && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.title.message}</p>}
@@ -499,7 +499,7 @@ export default function CreateExam() {
                       <Input
                         {...register("subject")}
                         placeholder="e.g. Biology"
-                        className={`rounded-xl ${errors.subject ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                        className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.subject ? "border-destructive focus-visible:ring-destructive" : ""}`}
                         data-testid="input-subject"
                       />
                       {errors.subject && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.subject.message}</p>}
@@ -515,13 +515,13 @@ export default function CreateExam() {
                             onValueChange={field.onChange}
                             value={field.value}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
                               <SelectValue placeholder="Select difficulty" />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="easy">Easy</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="hard">Hard</SelectItem>
+                            <SelectContent className="bg-popover dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                              <SelectItem value="easy" className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">Easy</SelectItem>
+                              <SelectItem value="medium" className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">Medium</SelectItem>
+                              <SelectItem value="hard" className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">Hard</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
@@ -534,7 +534,7 @@ export default function CreateExam() {
                     <Textarea
                       {...register("description")}
                       placeholder="Instructions for students..."
-                      className={`rounded-xl min-h-[100px] ${errors.description ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      className={`rounded-xl min-h-[100px] bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.description ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
                     {errors.description && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.description.message}</p>}
                   </div>
@@ -547,7 +547,7 @@ export default function CreateExam() {
                         {...register("questionCount")}
                         placeholder="20"
                         onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()}
-                        className={`rounded-xl ${errors.questionCount ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                        className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.questionCount ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
                       {errors.questionCount && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.questionCount.message}</p>}
                     </div>
@@ -560,7 +560,7 @@ export default function CreateExam() {
                         {...register("timeLimit")}
                         placeholder="60"
                         onKeyDown={(e) => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()}
-                        className={`rounded-xl ${errors.timeLimit ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                        className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.timeLimit ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
                       {errors.timeLimit && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.timeLimit.message}</p>}
                     </div>
@@ -576,7 +576,7 @@ export default function CreateExam() {
                             onValueChange={field.onChange}
                             value={field.value}
                           >
-                            <SelectTrigger className={`rounded-xl ${errors.timeLimitType ? "border-destructive focus:ring-destructive" : ""}`}>
+                            <SelectTrigger className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.timeLimitType ? "border-destructive focus:ring-destructive" : ""}`}>
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -594,7 +594,7 @@ export default function CreateExam() {
                     <Input
                       {...register("topics")}
                       placeholder="Cell Biology, Genetics, Evolution..."
-                      className={`rounded-xl ${errors.topics ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      className={`rounded-xl bg-background dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 ${errors.topics ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
                     {errors.topics && <p className="text-xs font-medium text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.topics.message}</p>}
                   </div>
@@ -611,10 +611,10 @@ export default function CreateExam() {
                     />
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer group ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'border-primary/50 bg-primary/5' : 'border-slate-200 hover:border-primary/50 hover:bg-primary/5'}`}
+                      className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer group ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'border-primary/50 bg-primary/5 dark:bg-primary/10' : 'border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10'}`}
                     >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'bg-primary/20' : 'bg-slate-100'}`}>
-                        <Upload className={`h-6 w-6 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'text-primary' : 'text-slate-500 group-hover:text-primary'}`} />
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'bg-primary/20 dark:bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                        <Upload className={`h-6 w-6 ${(selectedFiles.length > 0 || existingFiles.length > 0) ? 'text-primary' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary'}`} />
                       </div>
                       {(selectedFiles.length > 0 || existingFiles.length > 0) ? (
                         <div className="space-y-1">
@@ -673,25 +673,25 @@ export default function CreateExam() {
 
         {/* Question Preview/Edit Drawer */}
         <Sheet open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
-          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-background dark:bg-slate-950 border-slate-200 dark:border-slate-800">
             {selectedQuestion && (
               <>
-                <SheetHeader className="pb-6 border-b">
+                <SheetHeader className="pb-6 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{selectedQuestion.type || "Short"}</Badge>
-                    <Badge variant="outline" className="text-slate-500">{selectedQuestion.difficulty}</Badge>
-                    <Badge variant="outline" className="bg-slate-100">{selectedQuestion.marks} Marks</Badge>
+                    <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800">{selectedQuestion.difficulty}</Badge>
+                    <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800">{selectedQuestion.marks} Marks</Badge>
                   </div>
-                  <SheetTitle className="text-xl leading-tight">{selectedQuestion.id}: Edit Question</SheetTitle>
-                  <SheetDescription>Update the question content or metadata below.</SheetDescription>
+                  <SheetTitle className="text-xl leading-tight text-foreground">{selectedQuestion.id}: Edit Question</SheetTitle>
+                  <SheetDescription className="text-muted-foreground">Update the question content or metadata below.</SheetDescription>
                 </SheetHeader>
 
                 <div className="py-8 space-y-8">
                   <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Question Text</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Question Text</Label>
                     <Textarea
                       defaultValue={selectedQuestion.text}
-                      className="text-lg text-slate-900 font-medium leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[120px]"
+                      className="text-lg text-slate-900 dark:text-slate-100 font-medium leading-relaxed bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 min-h-[120px]"
                       onChange={(e) => {
                         const text = e.target.value;
                         setGeneratedQuestions((prev: any[]) => prev.map(q => q.id === selectedQuestion.id ? { ...q, text } : q));
@@ -705,13 +705,13 @@ export default function CreateExam() {
                       <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Options</Label>
                       <div className="grid gap-3">
                         {selectedQuestion.options.map((opt: string, i: number) => (
-                          <div key={i} className={`p-3 rounded-xl border flex items-center gap-3 ${opt === selectedQuestion.answer ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${opt === selectedQuestion.answer ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                          <div key={i} className={`p-3 rounded-xl border flex items-center gap-3 ${opt === selectedQuestion.answer ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${opt === selectedQuestion.answer ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
                               {String.fromCharCode(65 + i)}
                             </div>
                             <Input
                               defaultValue={opt}
-                              className="bg-transparent border-0 focus-visible:ring-0 p-0 h-auto font-medium"
+                              className="bg-transparent border-0 focus-visible:ring-0 p-0 h-auto font-medium text-foreground"
                               onChange={(e) => {
                                 const newVal = e.target.value;
                                 setGeneratedQuestions((prev: any[]) => prev.map(q => {
@@ -739,10 +739,10 @@ export default function CreateExam() {
                   )}
 
                   <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Correct Answer</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Correct Answer</Label>
                     <Input
                       defaultValue={selectedQuestion.answer}
-                      className="bg-emerald-50 text-emerald-800 p-4 rounded-xl border border-emerald-100 text-sm h-auto"
+                      className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-400 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800 text-sm h-auto font-bold"
                       onChange={(e) => {
                         const answer = e.target.value;
                         setGeneratedQuestions((prev: any[]) => prev.map(q => q.id === selectedQuestion.id ? { ...q, answer } : q));
@@ -752,12 +752,12 @@ export default function CreateExam() {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">AI Explanation</h4>
-                    <div className="flex gap-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">AI Explanation</h4>
+                    <div className="flex gap-3 bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
                       <Sparkles className="h-5 w-5 text-blue-500 shrink-0" />
                       <Textarea
                         defaultValue={selectedQuestion.explanation}
-                        className="text-sm text-slate-700 leading-relaxed italic bg-transparent border-0 focus-visible:ring-0 p-0 min-h-[80px]"
+                        className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic bg-transparent border-0 focus-visible:ring-0 p-0 min-h-[80px]"
                         onChange={(e) => {
                           const explanation = e.target.value;
                           setGeneratedQuestions((prev: any[]) => prev.map(q => q.id === selectedQuestion.id ? { ...q, explanation } : q));

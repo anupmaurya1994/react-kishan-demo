@@ -120,17 +120,17 @@ export function QuestionsList({
     };
 
     return (
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-white to-slate-50/50 p-6">
+        <Card className="border-0 shadow-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/50 p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 mb-1">
                             <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                            <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
+                            <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400">
                                 Generated Questions
                             </CardTitle>
                         </div>
-                        <CardDescription className="text-slate-500 font-medium">
+                        <CardDescription className="text-slate-500 dark:text-slate-400 font-medium">
                             Review and refine your AI-crafted content.
                         </CardDescription>
                     </div>
@@ -143,7 +143,7 @@ export function QuestionsList({
                                 size="sm"
                                 onClick={onRegenerate}
                                 disabled={isRegenerating}
-                                className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-all active:scale-95"
+                                className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/40 transition-all active:scale-95 text-foreground bg-background dark:bg-slate-950"
                             >
                                 {isRegenerating ? <Spinner className="size-4" /> : <RefreshCw className="h-4 w-4" />}
                                 {isRegenerating ? 'Regenerating...' : 'Regenerate'}
@@ -153,9 +153,9 @@ export function QuestionsList({
                                 variant="outline"
                                 size="sm"
                                 onClick={allLocked ? onUnlockAll : onApproveAll}
-                                className={`rounded-full gap-2 transition-all active:scale-95 ${allLocked
-                                    ? 'border-amber-200 text-amber-600 hover:bg-amber-50'
-                                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                className={`rounded-full gap-2 transition-all active:scale-95 bg-background dark:bg-slate-950 ${allLocked
+                                    ? 'border-amber-200 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                    : 'border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                                     }`}
                             >
                                 <CheckCircle2 className="h-4 w-4" />
@@ -166,7 +166,7 @@ export function QuestionsList({
                                 variant="outline"
                                 size="sm"
                                 onClick={onAddManual}
-                                className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-all active:scale-95"
+                                className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/40 transition-all active:scale-95 text-foreground bg-background dark:bg-slate-950"
                             >
                                 <Plus className="h-4 w-4" />
                                 Add Manual
@@ -177,7 +177,7 @@ export function QuestionsList({
                                     variant="outline"
                                     onClick={onSaveDraft}
                                     disabled={isDraftSaving}
-                                    className="rounded-full gap-2 border-slate-200 hover:bg-slate-100 transition-all active:scale-95"
+                                    className="rounded-full gap-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 bg-background dark:bg-slate-950 text-foreground"
                                 >
                                     <Save className="h-4 w-4" />
                                     {isDraftSaving ? 'Saving...' : 'Save Draft'}
@@ -187,9 +187,9 @@ export function QuestionsList({
                                 type="button"
                                 onClick={onPublish}
                                 disabled={isPublishing || publishStatus === 'Published'}
-                                className={`rounded-full gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-95 ${publishStatus === 'Published'
-                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                className={`rounded-full gap-2 shadow-lg transition-all active:scale-95 ${publishStatus === 'Published'
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200/50 dark:border-emerald-800/50 shadow-none'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 dark:shadow-emerald-900/40'
                                     }`}
                             >
                                 <Send className="h-4 w-4" />
@@ -202,32 +202,32 @@ export function QuestionsList({
                 {/* Tabs for Filtering */}
                 <div className="mt-8">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-                            <TabsTrigger
+                        <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
+                             <TabsTrigger
                                 value="all"
-                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all text-slate-500"
                             >
                                 <LayoutList className="h-4 w-4" />
                                 <span className="font-semibold">All</span>
-                                <Badge variant="secondary" className="ml-1 bg-slate-200/50 text-slate-600 border-0">{questions.length}</Badge>
+                                <Badge variant="secondary" className="ml-1 bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0">{questions.length}</Badge>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="locked"
-                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all"
+                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all text-slate-500"
                             >
                                 <Lock className="h-4 w-4" />
                                 <span className="font-semibold">Locked</span>
-                                <Badge variant="secondary" className="ml-1 bg-emerald-100/50 text-emerald-600 border-0 font-bold">
+                                <Badge variant="secondary" className="ml-1 bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-0 font-bold">
                                     {questions.filter(q => isQLocked(q)).length}
                                 </Badge>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="unlocked"
-                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all"
+                                className="rounded-xl px-6 py-2 gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all text-slate-500"
                             >
                                 <Unlock className="h-4 w-4" />
                                 <span className="font-semibold">Unlocked</span>
-                                <Badge variant="secondary" className="ml-1 bg-amber-100/50 text-amber-600 border-0 font-bold">
+                                <Badge variant="secondary" className="ml-1 bg-amber-100/50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-0 font-bold">
                                     {questions.filter(q => !isQLocked(q)).length}
                                 </Badge>
                             </TabsTrigger>
@@ -237,12 +237,12 @@ export function QuestionsList({
             </CardHeader>
 
             <CardContent className="p-0 flex-1 overflow-hidden">
-                <div className="overflow-x-auto h-full scrollbar-thin scrollbar-thumb-slate-200">
+                <div className="overflow-x-auto h-full scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
                     <Table>
-                        <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm">
+                        <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80 sticky top-0 z-10 backdrop-blur-sm">
                             <TableRow className="hover:bg-transparent">
                                 <TableHead className="w-[60px] text-xs font-bold uppercase tracking-wider text-slate-400 pl-6"></TableHead>
-                                <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-slate-400">ID</TableHead>
+                                <TableHead className="w-[80px] text-xs font-bold uppercase tracking-wider text-slate-400">SR NO</TableHead>
                                 <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400">Question</TableHead>
                                 <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400">Type</TableHead>
                                 <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400">Difficulty</TableHead>
@@ -258,7 +258,7 @@ export function QuestionsList({
                                 return (
                                     <React.Fragment key={questionId}>
                                         <TableRow
-                                            className={`cursor-pointer transition-all duration-200 group border-b border-slate-50 ${isExpanded ? 'bg-primary/5 shadow-inner' : 'hover:bg-slate-50/50'}`}
+                                            className={`cursor-pointer transition-all duration-200 group border-b border-slate-50 dark:border-slate-800 ${isExpanded ? 'bg-primary/5 dark:bg-primary/10 shadow-inner' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'}`}
                                             onClick={() => handleToggleExpand(q)}
                                         >
                                             <TableCell className="pl-6 py-4">
@@ -269,33 +269,33 @@ export function QuestionsList({
                                                     <ChevronDown className={`h-5 w-5 ${isExpanded ? 'text-primary' : 'text-slate-300'}`} />
                                                 </motion.div>
                                             </TableCell>
-                                            <TableCell className="font-mono text-xs text-slate-400">{questionId}</TableCell>
+                                            <TableCell className="font-mono text-xs text-slate-400">{(currentPage - 1) * pageSize + questions.indexOf(q) + 1}</TableCell>
                                             <TableCell className="max-w-[400px] py-4">
-                                                <p className={`font-semibold transition-colors ${isExpanded ? 'text-primary' : 'text-slate-700 line-clamp-1 group-hover:text-primary'}`}>
+                                                <p className={`font-semibold transition-colors ${isExpanded ? 'text-primary' : 'text-slate-700 dark:text-slate-300 line-clamp-1 group-hover:text-primary'}`}>
                                                     {q.text}
                                                 </p>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-600 border-0 font-medium">
+                                                <Badge variant="secondary" className="rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0 font-medium">
                                                     {q.type || "MCQ"}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-tighter ${q.difficulty === 'easy' ? 'bg-emerald-50 text-emerald-600' :
                                                     (q.difficulty === 'medium' || q.difficulty === 'Medium') ? 'bg-blue-50 text-blue-600' :
-                                                        'bg-rose-50 text-rose-600'
+                                                        'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400'
                                                     }`}>
                                                     {q.difficulty}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="font-bold text-slate-900">{q.marks}</TableCell>
+                                            <TableCell className="font-bold text-slate-900 dark:text-slate-100">{q.marks}</TableCell>
                                             <TableCell className="text-right pr-6">
                                                 <div className="flex justify-end gap-1">
                                                     {!qLocked && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 rounded-full text-emerald-500 hover:bg-emerald-50 transition-all"
+                                                            className="h-8 w-8 rounded-full text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
                                                             onClick={(e) => { e.stopPropagation(); onApprove(questionId); }}
                                                             title="Approve Question"
                                                         >
@@ -315,7 +315,7 @@ export function QuestionsList({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 rounded-full text-rose-500 hover:bg-rose-50 transition-all"
+                                                        className="h-8 w-8 rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                                                         onClick={(e) => { e.stopPropagation(); onDelete(questionId); }}
                                                         title="Delete Question"
                                                     >
@@ -333,17 +333,17 @@ export function QuestionsList({
                                                             animate={{ opacity: 1, height: "auto" }}
                                                             exit={{ opacity: 0, height: 0 }}
                                                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                            className="bg-slate-50/50 p-6 border-b border-primary/10"
+                                                            className="bg-slate-50/50 dark:bg-slate-900/50 p-6 border-b border-primary/10"
                                                         >
-                                                            <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-8 animate-in zoom-in-95 duration-300">
-                                                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                                            <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-8 space-y-8 animate-in zoom-in-95 duration-300">
+                                                                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
                                                                     <div className="flex items-center gap-3">
                                                                         <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
                                                                             <Edit2 className="h-5 w-5 text-primary" />
                                                                         </div>
                                                                         <div>
-                                                                            <h4 className="text-lg font-bold text-slate-900">Edit Question Detail</h4>
-                                                                            <p className="text-sm text-slate-500">Refine the content for this item</p>
+                                                                            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Question Detail</h4>
+                                                                            <p className="text-sm text-slate-500 dark:text-slate-400">Refine the content for this item</p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex gap-2">
@@ -365,7 +365,7 @@ export function QuestionsList({
                                                                                     value={editData.text}
                                                                                     onChange={(e) => setEditData({ ...editData, text: e.target.value })}
                                                                                     placeholder="Enter question text here..."
-                                                                                    className="min-h-[140px] rounded-2xl border-slate-200 focus:border-primary focus:ring-primary/10 text-slate-700 font-medium leading-relaxed"
+                                                                                    className="min-h-[140px] rounded-2xl border-slate-200 dark:border-slate-800 bg-background dark:bg-slate-950/50 focus:border-primary focus:ring-primary/10 text-slate-700 dark:text-slate-200 font-medium leading-relaxed"
                                                                                 />
                                                                             </div>
 
@@ -373,7 +373,7 @@ export function QuestionsList({
                                                                                 <div className="space-y-2">
                                                                                     <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Difficulty</Label>
                                                                                     <Select value={editData.difficulty} onValueChange={(v) => setEditData({ ...editData, difficulty: v })}>
-                                                                                        <SelectTrigger className="rounded-xl border-slate-200">
+                                                                                        <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-800 bg-background dark:bg-slate-950/50 dark:text-slate-200">
                                                                                             <SelectValue />
                                                                                         </SelectTrigger>
                                                                                         <SelectContent>
@@ -389,7 +389,7 @@ export function QuestionsList({
                                                                                         type="number"
                                                                                         value={editData.marks}
                                                                                         onChange={(e) => setEditData({ ...editData, marks: parseInt(e.target.value) })}
-                                                                                        className="rounded-xl border-slate-200"
+                                                                                        className="rounded-xl border-slate-200 dark:border-slate-800 bg-background dark:bg-slate-950/50"
                                                                                     />
                                                                                 </div>
                                                                             </div>
@@ -401,7 +401,7 @@ export function QuestionsList({
                                                                                 {editData.options?.map((opt, i) => {
                                                                                     const isCorrect = opt === editData.answer;
                                                                                     return (
-                                                                                        <div key={i} className={`group relative flex items-center gap-3 p-1 rounded-2xl border-2 transition-all ${isCorrect ? 'border-emerald-500/30 bg-emerald-50/50' : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'}`}>
+                                                                                        <div key={i} className={`group relative flex items-center gap-3 p-1 rounded-2xl border-2 transition-all ${isCorrect ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-slate-50 dark:hover:bg-slate-900'}`}>
                                                                                             <Input
                                                                                                 value={opt}
                                                                                                 onChange={(e) => {
@@ -412,7 +412,7 @@ export function QuestionsList({
                                                                                                     if (oldVal === editData.answer) nextEditData.answer = e.target.value;
                                                                                                     setEditData(nextEditData);
                                                                                                 }}
-                                                                                                className="border-0 bg-transparent focus-visible:ring-0 text-sm font-medium text-slate-700 h-10 px-4"
+                                                                                                className="border-0 bg-transparent focus-visible:ring-0 text-sm font-medium text-slate-700 dark:text-slate-200 h-10 px-4"
                                                                                             />
                                                                                             <Button
                                                                                                 variant="ghost"
@@ -433,7 +433,7 @@ export function QuestionsList({
                                                                                     value={editData.explanation || ""}
                                                                                     onChange={(e) => setEditData({ ...editData, explanation: e.target.value })}
                                                                                     placeholder="Why is this the correct answer?"
-                                                                                    className="min-h-[100px] rounded-2xl border-slate-200 text-sm italic text-slate-600 bg-blue-50/30"
+                                                                                    className="min-h-[100px] rounded-2xl border-slate-200 dark:border-slate-800 text-sm italic text-slate-600 dark:text-slate-400 bg-blue-50/30 dark:bg-blue-900/10"
                                                                                 />
                                                                             </div>
                                                                         </div>
@@ -459,7 +459,7 @@ export function QuestionsList({
                     </Table>
                 </div>
             </CardContent>
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <p className="text-xs font-medium text-slate-500">
                         Showing <span className="text-primary font-bold">{Math.min((currentPage - 1) * pageSize + 1, totalItems)} - {Math.min(currentPage * pageSize, totalItems)}</span> of <span className="text-primary font-bold">{totalItems}</span> craftsmanship entries
@@ -471,7 +471,7 @@ export function QuestionsList({
                             value={pageSize.toString()}
                             onValueChange={(v) => onPageSizeChange(parseInt(v))}
                         >
-                            <SelectTrigger className="h-8 w-20 text-xs rounded-xl bg-white border-slate-200">
+                            <SelectTrigger className="h-8 w-20 text-xs rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-200">
                                 <SelectValue placeholder="10" />
                             </SelectTrigger>
                             <SelectContent>

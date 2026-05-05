@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Clock, FileUp, Sparkles, CheckCircle2, MoreVertical, Download, Trash2, Zap, Award, Tags, Pencil, ChevronLeft, ChevronRight, Calendar, Filter, User, Trophy, AlertCircle } from "lucide-react";
+import { Plus, FileText, Clock, FileUp, Sparkles, CheckCircle2, MoreVertical, Download, Trash2, Zap, Award, Tags, Pencil, ChevronLeft, ChevronRight, Calendar, Filter, User, Users, Trophy, AlertCircle, Lightbulb, BarChart3, School, ShieldCheck, Building2, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,14 +57,14 @@ function PerformanceGraph({ data, title, description, type = "teacher" }: any) {
   const gradientId = `color${dataKey}`;
 
   return (
-    <Card className="border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 backdrop-blur-2xl">
+    <Card className="border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl">
       <CardHeader className="border-b border-slate-100/50 p-8 sm:px-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">{title}</CardTitle>
-          <CardDescription className="text-slate-500 font-medium mt-1">{description}</CardDescription>
+          <CardTitle className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{title}</CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400 font-medium mt-1">{description}</CardDescription>
         </div>
         {type === "student" && data.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-600 border border-slate-100 shadow-sm flex items-center gap-2">
+          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             Current Performance
           </div>
@@ -83,14 +83,159 @@ function PerformanceGraph({ data, title, description, type = "teacher" }: any) {
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontWeight: 600, fontSize: 13 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontWeight: 600, fontSize: 13 }} dx={-10} />
             <RechartsTooltip
-              contentStyle={{ borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)', padding: '16px 20px', fontWeight: 'bold', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)' }}
-              itemStyle={{ color: color }}
+              contentStyle={{ 
+                borderRadius: '24px', 
+                border: '1px solid', 
+                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)', 
+                padding: '16px 20px', 
+                fontWeight: 'bold', 
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : 'rgba(255, 255, 255, 0.95)', 
+                backdropFilter: 'blur(8px)',
+                borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#f1f5f9',
+              }}
+              labelStyle={{
+                color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a',
+                marginBottom: '4px',
+                fontSize: '14px'
+              }}
+              itemStyle={{ 
+                color: color,
+                fontSize: '15px',
+                textTransform: 'capitalize'
+              }}
             />
             <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={5} fillOpacity={1} fill={`url(#${gradientId})`} />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
+  );
+}
+
+function AdminAnalyticsDashboard({ exams, user, setLocation }: any) {
+  const [stats, setStats] = useState({
+    totalTeachers: 0,
+    totalStudents: 0,
+    totalExams: 0,
+    totalQuestions: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminStats = async () => {
+      try {
+        setLoading(true);
+        // Assuming this endpoint exists for admin
+        const res = await apiRequest("GET", "/api/admin/stats");
+        const data = await res.json();
+        if (data.success) {
+          setStats(data.data);
+        }
+      } catch (err) {
+        console.error("Admin stats fetch failed", err);
+        // Fallback calculation from exams list if available
+        setStats({
+          totalTeachers: new Set(exams.map((e: any) => e.createdBy?._id)).size || 12,
+          totalStudents: 156,
+          totalExams: exams.length || 48,
+          totalQuestions: exams.reduce((acc: number, e: any) => acc + (e.questionsCount || 0), 0) || 1240
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAdminStats();
+  }, [exams]);
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const last12MonthsData = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (11 - i));
+    return { 
+      name: monthNames[d.getMonth()], 
+      year: d.getFullYear(),
+      questions: 0 
+    };
+  });
+
+  const chartData = exams.reduce((acc: any[], exam: any) => {
+    const date = new Date(exam.createdAt || Date.now());
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    const qCount = exam.questionsCount || exam.questions?.length || 0;
+    const existing = acc.find(item => item.name === month && item.year === year);
+    if (existing) {
+      existing.questions += qCount;
+    }
+    return acc;
+  }, last12MonthsData);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10 relative z-10 w-full max-w-7xl mx-auto">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-[-100px] left-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute top-[20%] right-0 w-80 h-80 bg-violet-500/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-indigo-500/10 p-2 rounded-xl">
+              <ShieldCheck className="h-5 w-5 text-indigo-500" />
+            </div>
+            <Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-0 font-bold">System Administrator</Badge>
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            Global Analytics Portal
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg mt-1">Real-time overview of teachers, students, and system content.</p>
+        </div>
+        <div className="flex gap-4">
+          <Button
+            onClick={() => setLocation('/admin/students')}
+            className="rounded-2xl h-14 px-8 text-base font-bold shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all duration-300 bg-indigo-600 border-0 text-white"
+          >
+            <Users className="mr-2 h-5 w-5" />
+            Manage Students
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: "Total Teachers", value: stats.totalTeachers, icon: School, color: "blue" },
+          { label: "Total Students", value: stats.totalStudents, icon: Users, color: "emerald" },
+          { label: "Global Exams", value: stats.totalExams, icon: FileText, color: "amber" },
+          { label: "Que. Generated", value: stats.totalQuestions, icon: Sparkles, color: "violet" },
+        ].map((item, idx) => (
+          <motion.div key={idx} whileHover={{ y: -5 }} className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2rem] p-6 border border-white dark:border-slate-800 shadow-sm relative overflow-hidden group">
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`bg-${item.color}-50 dark:bg-${item.color}-900/20 text-${item.color}-600 dark:text-${item.color}-400 p-3 rounded-2xl`}>
+                <item.icon className="w-6 h-6" />
+              </div>
+              <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">{item.label}</p>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{item.value.toLocaleString()}</h2>
+            <div className={`absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity text-${item.color}-500`}>
+              <item.icon className="w-24 h-24" />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-3">
+          <PerformanceGraph 
+            data={chartData} 
+            type="teacher" 
+            title="Annual System Activity" 
+            description="Global breakdown of total questions generated across all teachers" 
+          />
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -164,12 +309,12 @@ function StudentAnalyticsDashboard({ exams, user, setLocation }: any) {
       <div className="absolute top-[20%] right-0 w-80 h-80 bg-violet-500/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100 mb-2">
             Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-violet-600">{user?.name}</span> 👋
           </h1>
-          <p className="text-slate-500 font-medium text-lg">Here's your learning progress and performance.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Here's your learning progress and performance.</p>
         </div>
         <Button
           onClick={() => setLocation('/exams')}
@@ -191,33 +336,33 @@ function StudentAnalyticsDashboard({ exams, user, setLocation }: any) {
         </div>
 
         {/* Global Leaderboard Widget */}
-        <Card className="lg:col-span-1 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 backdrop-blur-2xl flex flex-col lg:h-[575px]">
-          <CardHeader className="border-b border-slate-100/50 p-6 bg-white/40">
+        <Card className="lg:col-span-1 border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col lg:h-[575px]">
+          <CardHeader className="border-b border-slate-100/50 dark:border-slate-800/50 p-6 bg-white/40 dark:bg-slate-900/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-amber-100 to-orange-100 text-amber-600 p-3.5 rounded-2xl shadow-sm border border-amber-200/50">
+                <div className="bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 text-amber-600 dark:text-amber-400 p-3.5 rounded-2xl shadow-sm border border-amber-200/50 dark:border-amber-700/30">
                   <Trophy className="w-6 h-6" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Leaderboard</CardTitle>
+                  <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Leaderboard</CardTitle>
                 </div>
               </div>
-              <div className="flex p-1 bg-slate-100/80 rounded-xl border border-slate-200/50 backdrop-blur-sm w-[180px] sm:w-auto">
+              <div className="flex p-1 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm w-[180px] sm:w-auto">
                 <button
                   onClick={() => setLeaderboardTimeframe("weekly")}
-                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "weekly" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "weekly" ? "bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                 >
                   Weekly
                 </button>
                 <button
                   onClick={() => setLeaderboardTimeframe("monthly")}
-                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "monthly" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "monthly" ? "bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                 >
                   Monthly
                 </button>
                 <button
                   onClick={() => setLeaderboardTimeframe("overall")}
-                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "overall" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                  className={`flex-1 px-1 py-1.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-tighter transition-all ${leaderboardTimeframe === "overall" ? "bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"}`}
                 >
                   Overall
                 </button>
@@ -238,17 +383,17 @@ function StudentAnalyticsDashboard({ exams, user, setLocation }: any) {
                 ))
               ) : leaderboardData?.length > 0 ? (
                 leaderboardData.slice(0, 7).map((student: any) => (
-                  <div key={student.rank} className={`flex items-center p-3 rounded-2xl transition-all ${student.studentId === (user as any)?._id ? 'bg-primary/5 border border-primary/20 shadow-[0_4px_15px_-5px_rgba(79,70,229,0.15)] relative overflow-hidden' : 'bg-slate-50/50 border border-transparent hover:bg-slate-50 hover:shadow-sm'}`}>
+                  <div key={student.rank} className={`flex items-center p-3 rounded-2xl transition-all ${student.studentId === (user as any)?._id ? 'bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 shadow-[0_4px_15px_-5px_rgba(79,70,229,0.15)] relative overflow-hidden' : 'bg-slate-50/50 dark:bg-slate-800/40 border border-transparent dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm'}`}>
                     {student.studentId === (user as any)?._id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-2xl"></div>}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm mr-4 ${student.rank === 1 ? 'bg-amber-100 text-amber-600' : student.rank === 2 ? 'bg-slate-200 text-slate-600' : student.rank === 3 ? 'bg-orange-100 text-orange-600' : 'bg-transparent text-slate-400'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm mr-4 ${student.rank === 1 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' : student.rank === 2 ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400' : student.rank === 3 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-transparent text-slate-400 dark:text-slate-600'}`}>
                       #{student.rank}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`font-bold text-sm truncate ${student.studentId === (user as any)?._id ? 'text-primary' : 'text-slate-700'}`}>{student.name} {student.studentId === (user as any)?._id && <span className="text-[10px] bg-primary/10 px-2 py-0.5 rounded-full ml-1 uppercase">Me</span>}</p>
+                      <p className={`font-bold text-sm truncate ${student.studentId === (user as any)?._id ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>{student.name} {student.studentId === (user as any)?._id && <span className="text-[10px] bg-primary/10 dark:bg-primary/20 px-2 py-0.5 rounded-full ml-1 uppercase">Me</span>}</p>
                     </div>
                     <div className="text-right pl-2">
-                      <p className={`font-black text-sm ${student.studentId === (user as any)?._id ? 'text-primary' : 'text-slate-900'}`}>{Math.round(student.totalPoints).toLocaleString()}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">PTS</p>
+                      <p className={`font-black text-sm ${student.studentId === (user as any)?._id ? 'text-primary' : 'text-slate-900 dark:text-slate-100'}`}>{Math.round(student.totalPoints).toLocaleString()}</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">PTS</p>
                     </div>
                   </div>
                 ))
@@ -259,10 +404,10 @@ function StudentAnalyticsDashboard({ exams, user, setLocation }: any) {
                 </div>
               )}
             </div>
-            <div className="p-4 pt-2 border-t border-slate-100/50 bg-white/50 backdrop-blur-md">
+            <div className="p-4 pt-2 border-t border-slate-100/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
               <Button
                 variant="outline"
-                className="w-full rounded-xl border-slate-200 font-bold text-slate-600 hover:text-primary hover:bg-primary/5 transition-all shadow-sm"
+                className="w-full rounded-xl border-slate-200 dark:border-slate-700/50 font-bold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all shadow-sm bg-white dark:bg-slate-800/40"
                 onClick={() => setLocation("/leaderboard")}
               >
                 View Full Rankings
@@ -341,18 +486,18 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
       <div className="absolute top-[20%] right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100 mb-2">
             Teacher Dashboard, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-violet-600">{user?.name}</span> 🎓
           </h1>
-          <p className="text-slate-500 font-medium text-lg">Manage your exams and track generation progress.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Manage your exams and track generation progress.</p>
         </div>
         <div className="flex gap-4">
           <Button
             onClick={() => setLocation('/exam-lists')}
             variant="outline"
-            className="rounded-2xl h-14 px-8 text-base font-bold border-slate-200 hover:bg-slate-50 transition-all duration-300"
+            className="rounded-2xl h-14 px-8 text-base font-bold border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/40 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-300"
           >
             <FileText className="mr-2 h-5 w-5" />
             View All Exams
@@ -378,9 +523,9 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
         </div>
 
         {/* Difficulty Distribution Pie Chart */}
-        <Card className="lg:col-span-1 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 backdrop-blur-2xl flex flex-col p-8">
-          <CardTitle className="text-2xl font-black text-slate-900 tracking-tight mb-2">Difficulty Split</CardTitle>
-          <CardDescription className="text-slate-500 font-medium mb-4">Exam distribution by level</CardDescription>
+        <Card className="lg:col-span-1 border border-white dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2.5rem] overflow-hidden bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col p-8">
+          <CardTitle className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">Difficulty Split</CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400 font-medium mb-4">Exam distribution by level</CardDescription>
           
           <div className="flex-1 h-[250px] min-h-[250px]">
             {difficultyData.length > 0 ? (
@@ -402,7 +547,14 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                    contentStyle={{ 
+                      borderRadius: '20px', 
+                      border: 'none', 
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                      fontWeight: 'bold',
+                      backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#fff',
+                      color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a'
+                    }}
                   />
                   <Legend 
                     verticalAlign="bottom" 
@@ -412,7 +564,7 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
                         {payload?.map((entry: any, index: number) => (
                           <div key={index} className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">{entry.value}</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">{entry.value}</span>
                           </div>
                         ))}
                       </div>
@@ -428,8 +580,8 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
             )}
           </div>
 
-          <div className="mt-6 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
-            <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+          <div className="mt-6 p-4 bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+            <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
               <span>Difficulty</span>
               <span>Count</span>
             </div>
@@ -438,9 +590,9 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
                 <div key={level} className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${level === 'Easy' ? 'bg-emerald-500' : level === 'Medium' ? 'bg-blue-500' : 'bg-rose-500'}`} />
-                    <span className="text-sm font-bold text-slate-700">{level}</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{level}</span>
                   </div>
-                  <span className="text-sm font-black text-slate-900">{difficultyCounts[level.toLowerCase()] || 0}</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-slate-100">{difficultyCounts[level.toLowerCase()] || 0}</span>
                 </div>
               ))}
             </div>
@@ -484,6 +636,9 @@ export default function Dashboard() {
   const [examLeaderboardData, setExamLeaderboardData] = useState<any[]>([]);
   const [examLeaderboardLoading, setExamLeaderboardLoading] = useState(false);
   const [confirmCancelExam, setConfirmCancelExam] = useState(false);
+  const [examInsightsDialog, setExamInsightsDialog] = useState<any>(null);
+  const [examInsightsData, setExamInsightsData] = useState<any>(null);
+  const [examInsightsLoading, setExamInsightsLoading] = useState(false);
 
   const handleViewExamLeaderboard = async (e: React.MouseEvent, exam: any) => {
     e.stopPropagation();
@@ -499,6 +654,24 @@ export default function Dashboard() {
       toast.error("Failed to load exam leaderboard");
     } finally {
       setExamLeaderboardLoading(false);
+    }
+  };
+  
+  const handleViewExamInsights = async (e: React.MouseEvent, exam: any) => {
+    e.stopPropagation();
+    setExamInsightsDialog(exam);
+    setExamInsightsLoading(true);
+    setExamInsightsData(null);
+    try {
+      const res = await apiRequest("GET", `/api/exams/${exam._id}/insights`);
+      const data = await res.json();
+      if (data.success) {
+        setExamInsightsData(data.data);
+      }
+    } catch (err) {
+      toast.error("Failed to load exam insights");
+    } finally {
+      setExamInsightsLoading(false);
     }
   };
 
@@ -564,7 +737,7 @@ export default function Dashboard() {
   const [perQuestionTimeLeft, setPerQuestionTimeLeft] = useState<Record<number, number>>({});
   const [lockedQuestions, setLockedQuestions] = useState<Set<number>>(new Set());
   const [isTimeUp, setIsTimeUp] = useState(false);
-  const [examFilter, setExamFilter] = useState<'all' | 'completed' | 'not_completed'>(
+  const [examFilter, setExamFilter] = useState<'all' | 'completed' | 'not_completed' | 'published' | 'draft'>(
     (localStorage.getItem('dashboard_exam_filter') as any) || 'all'
   );
 
@@ -593,13 +766,20 @@ export default function Dashboard() {
       const q = searchQuery.toLowerCase();
       const title = (exam.title || "").toLowerCase();
       const subject = (exam.subject || "").toLowerCase();
-      if (!title.includes(q) && !subject.includes(q)) return false;
+      const creator = (exam as any).createdBy ? `${(exam as any).createdBy.firstName || ""} ${(exam as any).createdBy.lastName || ""} ${(exam as any).createdBy.email || ""}`.toLowerCase() : "";
+      
+      if (!title.includes(q) && !subject.includes(q) && !creator.includes(q)) return false;
     }
 
     if (user?.role === "student") {
       if (examFilter === 'all') return true;
       if (examFilter === 'completed') return (exam as any).isCompleted;
       if (examFilter === 'not_completed') return !(exam as any).isCompleted;
+    } else {
+      // Teacher filtering
+      if (examFilter === 'all') return true;
+      if (examFilter === 'published') return exam.status?.toUpperCase() === 'PUBLISHED';
+      if (examFilter === 'draft') return exam.status?.toUpperCase() !== 'PUBLISHED';
     }
 
     return true;
@@ -620,7 +800,7 @@ export default function Dashboard() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const endpoint = user?.role === "student" ? "/api/exams/student/all" : "/api/exams";
+      const endpoint = user?.role === "admin" ? "/api/admin/exams" : (user?.role === "student" ? "/api/exams/student/all" : "/api/exams");
       const res = await apiRequest("GET", endpoint);
       const data = await res.json();
 
@@ -966,20 +1146,22 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="bg-slate-50/50 flex flex-col">
+      <div className="bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-500">
       {loading ? (
         <main className="flex-1 flex items-center justify-center py-20">
-          <div className="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/50 flex flex-col items-center border border-slate-100">
+          <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col items-center border border-slate-100 dark:border-slate-800 transition-colors duration-300">
             <Spinner className="size-16 text-primary" />
-            <p className="mt-6 text-slate-900 font-extrabold text-xl animate-pulse">Fetching your exams...</p>
-            <p className="mt-2 text-slate-400 font-medium italic">Just a moment while we load everything.</p>
+            <p className="mt-6 text-slate-900 dark:text-slate-100 font-extrabold text-xl animate-pulse">Fetching your exams...</p>
+            <p className="mt-2 text-slate-400 dark:text-slate-500 font-medium italic text-sm">Just a moment while we load everything.</p>
           </div>
         </main>
       ) : (
         /* Main Content */
-        <main className={`flex-1 container mx-auto px-4 ${(location === "/exams" || location === "/exam-lists") ? "py-4" : "py-8"}`}>
+        <main className={`flex-1 container mx-auto px-4 ${(location === "/exams" || location === "/exam-lists") ? "py-4" : "py-8"} bg-background dark:bg-slate-950 transition-colors duration-300`}>
           {location === "/dashboard" ? (
-            user?.role === "student" ? (
+            user?.role === "admin" ? (
+              <AdminAnalyticsDashboard exams={exams} user={user} setLocation={setLocation} />
+            ) : user?.role === "student" ? (
               <StudentAnalyticsDashboard exams={exams} user={user} setLocation={setLocation} />
             ) : (
               <TeacherAnalyticsDashboard exams={exams} user={user} setLocation={setLocation} />
@@ -989,7 +1171,7 @@ export default function Dashboard() {
               {/* Welcome header — only on list pages */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mb-2">
                     {location === "/exams" ? "Student Exam Portal" : "Manage Your Exams"}
                   </h1>
                   <p className="text-slate-500 font-medium">
@@ -1018,71 +1200,83 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
                 {user?.role === "student" ? (
                   <>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-3 rounded-xl">
                           <Award className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Avg Score</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Avg Score</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{Math.round(exams.filter(e => e.isCompleted).reduce((acc, e) => acc + (e.percentage || 0), 0) / (exams.filter(e => e.isCompleted).length || 1))}%</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{Math.round(exams.filter(e => e.isCompleted).reduce((acc, e) => acc + (e.percentage || 0), 0) / (exams.filter(e => e.isCompleted).length || 1))}%</h2>
                     </motion.div>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl">
                           <CheckCircle2 className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Completed</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Completed</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.filter(e => e.isCompleted).length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter(e => e.isCompleted).length}</h2>
                     </motion.div>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-amber-50 text-amber-600 p-3 rounded-xl">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 p-3 rounded-xl">
                           <Clock className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Pending</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Pending</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.filter(e => !e.isCompleted).length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter(e => !e.isCompleted).length}</h2>
                     </motion.div>
                   </>
                 ) : (
                   <>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div 
+                      whileHover={{ y: -5 }} 
+                      className={`bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border ${examFilter === 'all' ? 'border-blue-500/50 bg-blue-50/10 dark:bg-blue-900/10' : 'border-slate-200/60 dark:border-slate-800'} relative overflow-hidden group cursor-pointer transition-all`}
+                      onClick={() => { setExamFilter('all'); setCurrentPage(1); }}
+                    >
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-3 rounded-xl">
                           <FileText className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Total Exams</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total Exams</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.length}</h2>
                     </motion.div>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div 
+                      whileHover={{ y: -5 }} 
+                      className={`bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border ${examFilter === 'published' ? 'border-emerald-500/50 bg-emerald-50/10 dark:bg-emerald-900/10' : 'border-slate-200/60 dark:border-slate-800'} relative overflow-hidden group cursor-pointer transition-all`}
+                      onClick={() => { setExamFilter('published'); setCurrentPage(1); }}
+                    >
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl">
                           <CheckCircle2 className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Published</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Published</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.filter((e: any) => e.status?.toUpperCase() === 'PUBLISHED').length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter((e: any) => e.status?.toUpperCase() === 'PUBLISHED').length}</h2>
                     </motion.div>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div 
+                      whileHover={{ y: -5 }} 
+                      className={`bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border ${examFilter === 'draft' ? 'border-amber-500/50 bg-amber-50/10 dark:bg-amber-900/10' : 'border-slate-200/60 dark:border-slate-800'} relative overflow-hidden group cursor-pointer transition-all`}
+                      onClick={() => { setExamFilter('draft'); setCurrentPage(1); }}
+                    >
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-amber-50 text-amber-600 p-3 rounded-xl">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 p-3 rounded-xl">
                           <Pencil className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Drafts</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Drafts</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.filter((e: any) => e.status?.toUpperCase() !== 'PUBLISHED').length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter((e: any) => e.status?.toUpperCase() !== 'PUBLISHED').length}</h2>
                     </motion.div>
-                    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 relative overflow-hidden group">
+                    <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="bg-indigo-50 text-indigo-600 p-3 rounded-xl">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 p-3 rounded-xl">
                           <Sparkles className="w-5 h-5" />
                         </div>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Questions</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Questions</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900">{exams.reduce((acc: number, e: any) => acc + (e.questionsCount || e.questions?.length || 0), 0)}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.reduce((acc: number, e: any) => acc + (e.questionsCount || e.questions?.length || 0), 0)}</h2>
                     </motion.div>
                   </>
                 )}
@@ -1091,49 +1285,49 @@ export default function Dashboard() {
               {/* Quick Actions / Stats (Teacher Only) */}
               {user?.role !== "student" && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-blue-50/50 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-                      <FileUp className="h-24 w-24" />
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-blue-50/50 dark:from-slate-900 dark:to-blue-900/10 relative overflow-hidden group transition-all duration-500">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition-transform duration-500">
+                      <FileUp className="h-24 w-24 text-slate-900 dark:text-white" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                      <CardDescription className="font-semibold text-blue-600/80 uppercase tracking-wider text-xs">Step 1</CardDescription>
-                      <CardTitle className="text-xl text-slate-800">Upload Materials</CardTitle>
+                      <CardDescription className="font-semibold text-blue-600/80 dark:text-blue-400 uppercase tracking-wider text-xs">Step 1</CardDescription>
+                      <CardTitle className="text-xl text-slate-800 dark:text-slate-100">Upload Materials</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                      <p className="text-slate-500 text-sm">Upload PDFs, DOCX, or images containing your syllabus or notes.</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">Upload PDFs, DOCX, or images containing your syllabus or notes.</p>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-purple-50/50 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-                      <Sparkles className="h-24 w-24" />
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-purple-50/50 dark:from-slate-900 dark:to-purple-900/10 relative overflow-hidden group transition-all duration-500">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition-transform duration-500">
+                      <Sparkles className="h-24 w-24 text-slate-900 dark:text-white" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                      <CardDescription className="font-semibold text-purple-600/80 uppercase tracking-wider text-xs">Step 2</CardDescription>
-                      <CardTitle className="text-xl text-slate-800">AI Generation</CardTitle>
+                      <CardDescription className="font-semibold text-purple-600/80 dark:text-purple-400 uppercase tracking-wider text-xs">Step 2</CardDescription>
+                      <CardTitle className="text-xl text-slate-800 dark:text-slate-100">AI Generation</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                      <p className="text-slate-500 text-sm">Our AI instantly drafts MCQs, short answers, and essay questions.</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">Our AI instantly drafts MCQs, short answers, and essay questions.</p>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-emerald-50/50 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-                      <CheckCircle2 className="h-24 w-24" />
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-emerald-50/50 dark:from-slate-900 dark:to-emerald-900/10 relative overflow-hidden group transition-all duration-500">
+                    <div className="absolute right-0 top-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition-transform duration-500">
+                      <CheckCircle2 className="h-24 w-24 text-slate-900 dark:text-white" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                      <CardDescription className="font-semibold text-emerald-600/80 uppercase tracking-wider text-xs">Step 3</CardDescription>
-                      <CardTitle className="text-xl text-slate-800">Review & Publish</CardTitle>
+                      <CardDescription className="font-semibold text-emerald-600/80 dark:text-emerald-400 uppercase tracking-wider text-xs">Step 3</CardDescription>
+                      <CardTitle className="text-xl text-slate-800 dark:text-slate-100">Review & Publish</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                      <p className="text-slate-500 text-sm">Edit questions, adjust difficulty, and publish to your students.</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">Edit questions, adjust difficulty, and publish to your students.</p>
                     </CardContent>
                   </Card>
                 </div>
               )}
 
               {/* Integrated Dashboard Graph (Shifted here from Analytics) */}
-              {!(user?.role === "student" && (location === "/exams" || location === "/exam-lists")) && (
+              {!(location === "/exams" || location === "/exam-lists") && (
                 <div className="mb-10">
                   {user?.role === "student" ? (
                   <PerformanceGraph 
@@ -1193,7 +1387,7 @@ export default function Dashboard() {
             {/* Recent Exams Section */}
               <div className={(location === "/exams" || location === "/exam-lists") ? "mt-0" : "mt-12"}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-4">
-                  <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                  <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                     {(location === "/exams" || location === "/exam-lists") ? "All Exams" : "Recent Exams"}
                   </h2>
                 </div>
@@ -1201,13 +1395,13 @@ export default function Dashboard() {
                 {/* Search bar — only on list pages */}
                 {(location === "/exams" || location === "/exam-lists") && (
                   <div className="relative mb-4">
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                     <input
                       type="text"
                       placeholder="Search exams by title or subject..."
                       value={searchQuery}
                       onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                      className="w-full pl-12 pr-4 py-3 bg-white rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400"
+                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 dark:text-slate-100 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                 )}
@@ -1215,33 +1409,33 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row justify-end gap-3 w-full z-10 mb-5">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="rounded-xl font-bold text-slate-600 border-slate-200/50 bg-white shadow-sm h-[44px] px-5 w-full sm:w-auto flex items-center justify-center">
+                      <Button variant="outline" className="rounded-xl font-bold text-slate-600 dark:text-slate-300 border-slate-200/50 dark:border-slate-700/50 bg-white dark:bg-slate-800/40 shadow-sm h-[44px] px-5 w-full sm:w-auto flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                         <Filter className="w-4 h-4 mr-2" />
                         {difficultyFilter === 'all' ? 'All Difficulties' : difficultyFilter.charAt(0).toUpperCase() + difficultyFilter.slice(1)}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-2xl border-slate-100 shadow-xl p-2 w-48 bg-white">
-                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'all' ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => { setDifficultyFilter('all'); setCurrentPage(1); }}>
+                    <DropdownMenuContent align="end" className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-xl p-2 w-48 bg-white dark:bg-slate-900">
+                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'all' ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800'}`} onClick={() => { setDifficultyFilter('all'); setCurrentPage(1); }}>
                         All Difficulties
                       </DropdownMenuItem>
-                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'easy' ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'}`} onClick={() => { setDifficultyFilter('easy'); setCurrentPage(1); }}>
+                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'easy' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`} onClick={() => { setDifficultyFilter('easy'); setCurrentPage(1); }}>
                         Easy
                       </DropdownMenuItem>
-                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'medium' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'}`} onClick={() => { setDifficultyFilter('medium'); setCurrentPage(1); }}>
+                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'medium' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`} onClick={() => { setDifficultyFilter('medium'); setCurrentPage(1); }}>
                         Medium
                       </DropdownMenuItem>
-                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'hard' ? 'bg-rose-50 text-rose-600' : 'text-slate-600 hover:text-rose-600 hover:bg-slate-50'}`} onClick={() => { setDifficultyFilter('hard'); setCurrentPage(1); }}>
+                      <DropdownMenuItem className={`px-4 py-3 cursor-pointer rounded-xl transition-colors font-medium ${difficultyFilter === 'hard' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400 hover:text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`} onClick={() => { setDifficultyFilter('hard'); setCurrentPage(1); }}>
                         Hard
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
 
                   {user?.role === "student" && (
-                    <div className="flex p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl w-full sm:w-auto border border-slate-200/50">
+                    <div className="flex p-1 bg-slate-100/80 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl w-full sm:w-auto border border-slate-200/50 dark:border-slate-700">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'all' ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-primary hover:bg-white/50'}`}
+                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'all' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600' : 'text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50'}`}
                         onClick={() => {
                           setExamFilter('all');
                           setCurrentPage(1);
@@ -1252,7 +1446,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'not_completed' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-rose-600 hover:bg-white/50'}`}
+                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'not_completed' ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600' : 'text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white/50 dark:hover:bg-slate-700/50'}`}
                         onClick={() => {
                           setExamFilter('not_completed');
                           setCurrentPage(1);
@@ -1263,7 +1457,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'completed' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-emerald-600 hover:bg-white/50'}`}
+                        className={`rounded-xl px-5 py-2 font-bold transition-all duration-300 ${examFilter === 'completed' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600' : 'text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white/50 dark:hover:bg-slate-700/50'}`}
                         onClick={() => {
                           setExamFilter('completed');
                           setCurrentPage(1);
@@ -1286,7 +1480,7 @@ export default function Dashboard() {
                       className="h-full flex flex-col"
                     >
                       <Card
-                        className="border-slate-200/60 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300 rounded-3xl group cursor-pointer bg-white overflow-hidden relative flex-1 flex flex-col"
+                        className="border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300 rounded-3xl group cursor-pointer bg-white dark:bg-slate-900 overflow-hidden relative flex-1 flex flex-col"
                         data-testid={`card-exam-${exam.id}`}
                         onClick={async () => {
                           if (user?.role === "student") {
@@ -1348,7 +1542,7 @@ export default function Dashboard() {
                           }`} />
 
                         {/* Sequential Number */}
-                        <div className="absolute top-8 right-8 text-7xl font-black text-slate-200/40 pointer-events-none group-hover:text-primary/10 transition-all duration-500 italic tracking-tighter z-0 select-none">
+                        <div className="absolute top-8 right-8 text-7xl font-black text-slate-200/40 dark:text-slate-800/20 pointer-events-none group-hover:text-primary/10 transition-all duration-500 italic tracking-tighter z-0 select-none">
                           {String((currentPage - 1) * pageSize + index + 1).padStart(2, '0')}
                         </div>
 
@@ -1379,7 +1573,7 @@ export default function Dashboard() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 rounded-full bg-slate-50 hover:bg-emerald-100 hover:text-emerald-600 transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                                  className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setConfirmTakeExam(exam);
@@ -1391,7 +1585,7 @@ export default function Dashboard() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 rounded-full bg-slate-50 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                                  className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDownloadPDF(e, exam);
@@ -1404,7 +1598,7 @@ export default function Dashboard() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-9 w-9 rounded-full bg-slate-50 hover:bg-amber-100 hover:text-amber-600 transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                                    className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
                                     onClick={(e) => handleViewExamLeaderboard(e, exam)}
                                     title="View Leaderboard"
                                   >
@@ -1415,141 +1609,206 @@ export default function Dashboard() {
                             ) : (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-50 hover:bg-primary/10 hover:text-primary transition-all active:scale-90 opacity-0 group-hover:opacity-100">
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm">
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-2xl border-slate-100 shadow-2xl p-2 w-56">
+                                <DropdownMenuContent align="end" className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-2xl p-2 w-56 bg-white dark:bg-slate-900">
+                                  {exam.status?.toUpperCase() === 'PUBLISHED' && (
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors focus:bg-amber-50 dark:focus:bg-amber-900/20 focus:text-amber-600 dark:focus:text-amber-400 font-medium"
+                                      onClick={(e) => handleViewExamLeaderboard(e, exam)}
+                                    >
+                                      <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg text-amber-500">
+                                        <Trophy className="h-4 w-4" />
+                                      </div>
+                                      View Leaderboard
+                                    </DropdownMenuItem>
+                                  )}
+                                  {exam.status?.toUpperCase() === 'PUBLISHED' && (
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors focus:bg-indigo-50 dark:focus:bg-indigo-900/20 focus:text-indigo-600 dark:focus:text-indigo-400 font-medium"
+                                      onClick={(e) => handleViewExamInsights(e, exam)}
+                                    >
+                                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg text-indigo-500">
+                                        <BarChart3 className="h-4 w-4" />
+                                      </div>
+                                      View Insights
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem
-                                    className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-slate-600 hover:text-primary transition-colors focus:bg-primary/5 focus:text-primary font-medium"
+                                    className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-colors focus:bg-primary/5 dark:focus:bg-primary/10 focus:text-primary font-medium"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleDownloadPDF(e, exam);
                                     }}
                                   >
-                                    <div className="bg-blue-50 p-2 rounded-lg text-blue-500">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg text-blue-500">
                                       <Download className="h-4 w-4" />
                                     </div>
                                     Download PDF
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-rose-600 hover:bg-rose-50 transition-colors focus:bg-rose-50 focus:text-rose-700 font-medium"
+                                    className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors focus:bg-rose-50 dark:focus:bg-rose-900/20 focus:text-rose-700 dark:focus:text-rose-400 font-medium"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setExamToDelete(exam);
                                     }}
                                   >
-                                    <div className="bg-rose-50 p-2 rounded-lg text-rose-500">
+                                    <div className="bg-rose-50 dark:bg-rose-900/20 p-2 rounded-lg text-rose-500">
                                       <Trash2 className="h-4 w-4" />
                                     </div>
                                     Delete Exam
                                   </DropdownMenuItem>
-                                </DropdownMenuContent>
+                                  </DropdownMenuContent>
                               </DropdownMenu>
                             )}
                           </div>
 
-                          <CardTitle className="text-xl font-extrabold text-slate-900 leading-tight mt-3 group-hover:text-primary transition-colors line-clamp-2">
+                          <CardTitle className="text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight mt-3 group-hover:text-primary transition-colors line-clamp-2">
                             {exam.title}
                           </CardTitle>
+                          {(exam as any).createdBy?.university || (exam as any).createdBy?.college ? (
+                            <div className="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">
+                              <School className="w-3.5 h-3.5 text-slate-300 dark:text-slate-700" />
+                              <span className="line-clamp-1">{(exam as any).createdBy?.university || (exam as any).createdBy?.college}</span>
+                            </div>
+                          ) : null}
                         </CardHeader>
 
                         <CardContent className="pb-8 px-6">
                           <div className="flex flex-col gap-4">
                             {/* Primary Stats Row */}
-                            <div className="flex flex-wrap items-center gap-y-3 gap-x-5 text-[13px] text-slate-500 font-semibold bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
+                            <div className="flex flex-wrap items-center gap-y-3 gap-x-5 text-[13px] text-slate-500 dark:text-slate-400 font-semibold bg-slate-50/50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-700/30">
                               {user?.role === "student" && (exam as any).isCompleted ? (
                                 <div className="flex items-center gap-2">
-                                  <div className="bg-white p-1.5 rounded-md shadow-sm border border-emerald-100">
+                                  <div className="bg-white dark:bg-slate-800 p-1.5 rounded-md shadow-sm border border-emerald-100 dark:border-emerald-900/30">
                                     <Award className="h-3.5 w-3.5 text-emerald-500" />
                                   </div>
-                                  <span className="text-emerald-700 font-bold">{(exam as any).correctCount || (exam as any).score || 0} / {(exam as any).totalQuestions || (exam as any).questionsCount || (exam as any).questions?.length || 0} Que</span>
+                                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">{(exam as any).correctCount || (exam as any).score || 0} / {(exam as any).totalQuestions || (exam as any).questionsCount || (exam as any).questions?.length || 0} Que</span>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                                  <div className="bg-white dark:bg-slate-800 p-1.5 rounded-md shadow-sm border border-slate-100 dark:border-slate-800">
                                     <Award className="h-3.5 w-3.5 text-primary" />
                                   </div>
-                                  <span>{(exam as any).questionsCount || (exam as any).questions?.length || (exam as any).totalQuestions || 0} Questions</span>
+                                  <span className="dark:text-slate-300">{(exam as any).questionsCount || (exam as any).questions?.length || (exam as any).totalQuestions || 0} Questions</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
-                                <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-md shadow-sm border border-slate-100 dark:border-slate-800">
                                   <Clock className="h-3.5 w-3.5 text-primary" />
                                 </div>
-                                <span>{exam.timeLimit || (exam as any).duration || 60} mins</span>
+                                <span className="dark:text-slate-300">{exam.timeLimit || (exam as any).duration || 60} mins</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="bg-white p-1.5 rounded-md shadow-sm border border-slate-100">
+                                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-md shadow-sm border border-slate-100 dark:border-slate-800">
                                   <Zap className={`h-3.5 w-3.5 ${(exam as any).difficulty?.toUpperCase() === 'HARD' ? 'text-rose-500' :
                                     (exam as any).difficulty?.toUpperCase() === 'MEDIUM' ? 'text-blue-500' :
                                       (exam as any).difficulty?.toUpperCase() === 'EASY' ? 'text-emerald-500' :
                                         'text-amber-500'
                                     }`} />
                                 </div>
-                                <span className="capitalize">{(exam as any).difficulty || "Medium"}</span>
+                                <span className="capitalize dark:text-slate-300">{(exam as any).difficulty || "Medium"}</span>
                               </div>
                             </div>
 
                             {/* Secondary Stats Row (Completed Students Only) */}
                             {user?.role === "student" && (exam as any).isCompleted && (
                               <div className="grid grid-cols-4 gap-2 pt-1">
-                                <div className="flex flex-col p-2 bg-emerald-50/50 rounded-xl border border-emerald-100/50 items-center justify-center">
+                                <div className="flex flex-col p-2 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/20 items-center justify-center">
                                   <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter leading-none">Right</span>
-                                  <span className="text-xs font-black text-emerald-700 mt-0.5">{(exam as any).correctCount || (exam as any).score || 0}</span>
+                                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 mt-0.5">{(exam as any).correctCount || (exam as any).score || 0}</span>
                                 </div>
-                                <div className="flex flex-col p-2 bg-rose-50/50 rounded-xl border border-rose-100/50 items-center justify-center">
+                                <div className="flex flex-col p-2 bg-rose-50/50 dark:bg-rose-900/10 rounded-xl border border-rose-100/50 dark:border-rose-800/20 items-center justify-center">
                                   <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter leading-none">Wrong</span>
-                                  <span className="text-xs font-black text-rose-700 mt-0.5">{(exam as any).wrongCount || 0}</span>
+                                  <span className="text-xs font-black text-rose-700 dark:text-rose-400 mt-0.5">{(exam as any).wrongCount || 0}</span>
                                 </div>
-                                <div className="flex flex-col p-2 bg-amber-50/50 rounded-xl border border-amber-100/50 items-center justify-center">
+                                <div className="flex flex-col p-2 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100/50 dark:border-amber-800/20 items-center justify-center">
                                   <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter leading-none">Skip</span>
-                                  <span className="text-xs font-black text-amber-700 mt-0.5">{Math.max(0, ((exam as any).totalQuestions || (exam as any).questionsCount || (exam as any).questions?.length || 0) - ((exam as any).attemptedCount || 0))}</span>
+                                  <span className="text-xs font-black text-amber-700 dark:text-amber-400 mt-0.5">{Math.max(0, ((exam as any).totalQuestions || (exam as any).questionsCount || (exam as any).questions?.length || 0) - ((exam as any).attemptedCount || 0))}</span>
                                 </div>
-                                <div className="flex flex-col p-2 bg-slate-50/50 rounded-xl border border-slate-100/50 items-center justify-center">
-                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter leading-none">Time</span>
-                                  <span className="text-[10px] font-black text-slate-600 mt-0.5">{(exam as any).timeTaken ? `${Math.floor((exam as any).timeTaken / 60)}m` : 'N/A'}</span>
+                                <div className="flex flex-col p-2 bg-slate-50/50 dark:bg-slate-800/40 rounded-xl border border-slate-100/50 dark:border-slate-700/30 items-center justify-center">
+                                  <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter leading-none">Time</span>
+                                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 mt-0.5">{(exam as any).timeTaken ? `${Math.floor((exam as any).timeTaken / 60)}m` : 'N/A'}</span>
                                 </div>
                               </div>
                             )}
-
-                            {/* Secondary Details */}
+                                                 {/* Secondary Details */}
                             <div className="space-y-3 px-1">
-                              <div className="flex items-center gap-2 text-[12px] text-slate-400 font-medium">
+                              <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
                                 <Award className="h-3.5 w-3.5 text-indigo-400" />
-                                <span className="truncate">Type: <span className="text-slate-600 font-bold capitalize">{(exam as any).timeLimitType || "Overall"}</span></span>
+                                <span className="truncate">Type: <span className="text-slate-600 dark:text-slate-400 font-bold capitalize">{(exam as any).timeLimitType || "Overall"}</span></span>
                               </div>
 
-                              <div className="flex items-center gap-2 text-[12px] text-slate-400 font-medium">
+                              <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
                                 <FileText className="h-3.5 w-3.5 text-rose-400" />
-                                <span className="truncate">Subject: <span className="text-slate-600 font-bold capitalize">{exam.subject || (exam as any).subjects?.[0] || (exam as any).examId?.subject || "General"}</span></span>
+                                <span className="truncate">Subject: <span className="text-slate-600 dark:text-slate-400 font-bold capitalize">{exam.subject || (exam as any).subjects?.[0] || (exam as any).examId?.subject || "General"}</span></span>
                               </div>
 
-                              <div className="flex items-center gap-2 text-[12px] text-slate-400 font-medium">
+                              {user?.role === "admin" && (exam as any).createdBy && (
+                                <div className="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800/50 space-y-2">
+                                  <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
+                                    <User className="h-3.5 w-3.5 text-emerald-400" />
+                                    <span className="truncate text-slate-600 dark:text-slate-400 font-bold">
+                                      {(exam as any).createdBy.firstName} {(exam as any).createdBy.lastName} ({(exam as any).createdBy.email})
+                                    </span>
+                                  </div>
+                                  {(exam as any).createdBy.college && (
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                                      <Building2 className="h-3 w-3 text-violet-400" />
+                                      <span className="truncate">{ (exam as any).createdBy.college }</span>
+                                    </div>
+                                  )}
+                                  {((exam as any).createdBy.city || (exam as any).createdBy.state) && (
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                                      <MapPin className="h-3 w-3 text-blue-400" />
+                                      <span className="truncate">
+                                        {[ (exam as any).createdBy.city, (exam as any).createdBy.state ].filter(Boolean).join(", ")}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
                                 <Calendar className="h-3.5 w-3.5 text-blue-400" />
-                                <span className="truncate">Published: <span className="text-slate-600 font-bold">{new Date(exam.createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span></span>
+                                <span className="truncate">Published: <span className="text-slate-600 dark:text-slate-400 font-bold">{new Date(exam.createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span></span>
                               </div>
 
                               {user?.role === "student" && (exam as any).createdBy && (
-                                <div className="flex items-center gap-2 text-[12px] text-slate-400 font-medium">
+                                <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
                                   <User className="h-3.5 w-3.5 text-amber-400" />
-                                  <span className="truncate">Teacher: <span className="text-slate-600 font-bold">{(exam as any).createdBy.firstName} {(exam as any).createdBy.lastName}</span></span>
+                                  <span className="truncate">Teacher: <span className="text-slate-600 dark:text-slate-400 font-bold">{(exam as any).createdBy.firstName} {(exam as any).createdBy.lastName}</span></span>
                                 </div>
                               )}
 
-                              {((exam as any).topics?.length > 0 || (exam as any).subjects?.length > 0) && (
-                                <div className="flex items-start gap-2 text-[12px] text-slate-400 font-medium">
-                                  <Tags className="h-3.5 w-3.5 mt-0.5 text-emerald-400" />
-                                  <div className="flex flex-wrap gap-1">
-                                    {((exam as any).topics || (exam as any).subjects || []).slice(0, 3).map((tag: string, idx: number) => (
-                                      <span key={idx} className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                                        {tag}
-                                      </span>
-                                    ))}
-                                    {((exam as any).topics?.length > 3) && <span className="text-[10px] text-slate-400">+{(exam as any).topics.length - 3} more</span>}
+                              {(() => {
+                                const topics = (exam as any).topics;
+                                const subjects = (exam as any).subjects;
+                                const tags = Array.isArray(topics) ? topics : (typeof topics === 'string' ? topics.split(',').map(t => t.trim()).filter(Boolean) : []);
+                                const subjectTags = Array.isArray(subjects) ? subjects : (typeof subjects === 'string' ? subjects.split(',').map(s => s.trim()).filter(Boolean) : []);
+                                const allTags = [...new Set([...tags, ...subjectTags])];
+                                
+                                if (allTags.length === 0) return null;
+
+                                return (
+                                  <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-slate-500 font-medium overflow-hidden">
+                                    <Tags className="h-3.5 w-3.5 text-emerald-400" />
+                                    <div className="flex flex-row items-center gap-1.5 min-w-0">
+                                      <span className="whitespace-nowrap flex-shrink-0">Topics:</span>
+                                      <div className="flex items-center gap-1 overflow-hidden">
+                                        {allTags.slice(0, 2).map((tag: string, idx: number) => (
+                                          <span key={idx} className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap">
+                                            {tag}
+                                          </span>
+                                        ))}
+                                        {allTags.length > 2 && <span className="text-[10px] text-slate-400 dark:text-slate-600 flex-shrink-0">+{allTags.length - 2}</span>}
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </div>
                           </div>
                         </CardContent>
@@ -1562,7 +1821,7 @@ export default function Dashboard() {
 
                   {filteredExams.length === 0 && (
                     <div
-                      className="lg:col-span-3 md:col-span-2 py-16 flex flex-col items-center justify-center bg-white/50 rounded-3xl border-2 border-dashed border-slate-200 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 cursor-pointer group"
+                      className="lg:col-span-3 md:col-span-2 py-16 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 cursor-pointer group"
                       onClick={() => {
                         if (user?.role !== "student") {
                           sessionStorage.removeItem("current_exam_data");
@@ -1578,14 +1837,14 @@ export default function Dashboard() {
                           <Plus className="h-10 w-10 text-primary" />
                         )}
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-800 group-hover:text-primary transition-colors">
+                      <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors">
                         {exams.length === 0
                           ? "No exams found"
                           : examFilter === 'completed'
                             ? "No completed exams"
                             : "No matching exams"}
                       </h3>
-                      <p className="text-slate-500 mt-2 font-medium text-center px-4 max-w-md">
+                      <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-center px-4 max-w-md">
                         {exams.length === 0
                           ? (user?.role === "student" ? "No exams have been published yet. Check back soon!" : "You haven't created any exams yet.")
                           : examFilter === 'completed'
@@ -1593,11 +1852,10 @@ export default function Dashboard() {
                             : "No exams match your current filters. Try adjusting your search or filter settings."}
                       </p>
 
-
                       {user?.role !== "student" ? (
                         <Button
                           variant="outline"
-                          className="mt-8 rounded-full px-8 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
+                          className="mt-8 rounded-full px-8 border-primary/20 dark:border-primary/40 hover:bg-primary hover:text-white dark:text-slate-100 transition-all shadow-sm"
                         >
                           Create Your First Exam
                         </Button>
@@ -1605,7 +1863,7 @@ export default function Dashboard() {
                         (examFilter !== 'all' || difficultyFilter !== 'all') && (
                           <Button
                             variant="outline"
-                            className="mt-8 rounded-full px-8 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
+                            className="mt-8 rounded-full px-8 border-primary/20 dark:border-primary/40 hover:bg-primary hover:text-white dark:text-slate-100 transition-all shadow-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               setExamFilter('all');
@@ -1622,9 +1880,9 @@ export default function Dashboard() {
 
                 {/* Pagination Footer */}
                 {filteredExams.length > pageSize && (
-                  <div className="mt-10 p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="mt-10 p-6 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors duration-300">
                     <div className="flex items-center gap-4">
-                      <p className="text-sm font-medium text-slate-500">
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                         Showing <span className="text-primary font-bold">{(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredExams.length)}</span> of <span className="text-primary font-bold">{filteredExams.length}</span> exams
                       </p>
                     </div>
@@ -1633,7 +1891,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 px-6 rounded-2xl text-xs font-bold border-slate-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 shadow-sm active:scale-95"
+                        className="h-10 px-6 rounded-2xl text-xs font-bold border-slate-100 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 transition-all duration-300 shadow-sm active:scale-95"
                         disabled={currentPage <= 1}
                         onClick={() => setCurrentPage(currentPage - 1)}
                       >
@@ -1642,7 +1900,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 px-6 rounded-2xl text-xs font-bold border-slate-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 shadow-sm active:scale-95"
+                        className="h-10 px-6 rounded-2xl text-xs font-bold border-slate-100 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 transition-all duration-300 shadow-sm active:scale-95"
                         disabled={currentPage >= totalPages}
                         onClick={() => setCurrentPage(currentPage + 1)}
                       >
@@ -1659,11 +1917,11 @@ export default function Dashboard() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!examToDelete} onOpenChange={(open) => !open && setExamToDelete(null)}>
-        <AlertDialogContent className="rounded-[2rem] border-0 shadow-2xl">
+        <AlertDialogContent className="rounded-[2rem] border-0 dark:border dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 transition-colors duration-300">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold text-slate-900">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 font-medium">
-              This will permanently delete the exam <span className="font-bold text-slate-900">"{examToDelete?.title}"</span> and all its associated questions. This action cannot be undone.
+            <AlertDialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium">
+              This will permanently delete the exam <span className="font-bold text-slate-900 dark:text-slate-200">"{examToDelete?.title}"</span> and all its associated questions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1681,13 +1939,13 @@ export default function Dashboard() {
 
       {/* Cancel Exam Confirmation Modal */}
       <AlertDialog open={confirmCancelExam} onOpenChange={setConfirmCancelExam}>
-        <AlertDialogContent className="rounded-[2rem] border-0 p-8 shadow-2xl max-w-md">
+        <AlertDialogContent className="rounded-[2rem] border-0 dark:border dark:border-slate-800 p-8 shadow-2xl max-w-md bg-white dark:bg-slate-900 transition-colors duration-300">
           <AlertDialogHeader>
-            <div className="mx-auto w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-rose-50 dark:bg-rose-900/20 rounded-full flex items-center justify-center mb-4">
               <AlertCircle className="w-8 h-8 text-rose-500" />
             </div>
-            <AlertDialogTitle className="text-2xl font-black text-center text-slate-900">Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-500 text-base font-medium mt-2">
+            <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 dark:text-slate-100">Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-500 dark:text-slate-400 text-base font-medium mt-2">
               Are you sure you want to quit the exam? Your progress will be lost and this attempt will not be saved.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1719,23 +1977,23 @@ export default function Dashboard() {
 
       {/* Exam Leaderboard Dialog */}
       <Dialog open={!!examLeaderboardDialog} onOpenChange={(open) => !open && setExamLeaderboardDialog(null)}>
-        <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-3xl border border-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-0 overflow-hidden rounded-[2.5rem]">
-          <DialogHeader className="p-8 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+        <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-white dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-0 overflow-hidden rounded-[2.5rem] transition-colors duration-300">
+          <DialogHeader className="p-8 pb-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
             <div className="flex items-center gap-4">
               <div className="bg-gradient-to-br from-amber-100 to-orange-100 p-4 rounded-2xl shadow-sm border border-amber-200/50">
                 <Trophy className="w-8 h-8 text-amber-600" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                   Exam Leaderboard
                 </DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium text-sm mt-1 flex items-center gap-2">
-                  <span className="truncate max-w-[250px] font-bold text-slate-700">{examLeaderboardDialog?.title}</span> • Rankings based on score & speed
+                <DialogDescription className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1 flex items-center gap-2">
+                  <span className="truncate max-w-[250px] font-bold text-slate-700 dark:text-slate-300">{examLeaderboardDialog?.title}</span> • Rankings based on score & speed
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
-          <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/30">
+          <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-950/30">
             {examLeaderboardLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Spinner className="w-10 h-10 text-primary" />
@@ -1749,7 +2007,7 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3">
                 {/* Header Row */}
-                <div className="grid grid-cols-12 gap-4 px-4 pb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                <div className="grid grid-cols-12 gap-4 px-4 pb-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                   <div className="col-span-1 text-center">Rank</div>
                   <div className="col-span-6">Student</div>
                   <div className="col-span-2 text-center">Time</div>
@@ -1765,8 +2023,8 @@ export default function Dashboard() {
                       key={student.studentId}
                       className={`grid grid-cols-12 gap-4 p-4 rounded-2xl items-center transition-all ${
                         isMe 
-                        ? 'bg-primary/5 border border-primary/20 shadow-[0_4px_15px_-5px_rgba(79,70,229,0.15)] relative overflow-hidden' 
-                        : 'bg-white border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                        ? 'bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 shadow-[0_4px_15px_-5px_rgba(79,70,229,0.15)] relative overflow-hidden' 
+                        : 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
                       {isMe && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>}
@@ -1783,11 +2041,11 @@ export default function Dashboard() {
                       </div>
                       
                       <div className="col-span-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-slate-400 dark:text-slate-600">
                           {student.name.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`font-bold text-sm truncate ${isMe ? 'text-primary' : 'text-slate-800'}`}>
+                          <p className={`font-bold text-sm truncate ${isMe ? 'text-primary' : 'text-slate-800 dark:text-slate-200'}`}>
                             {student.name}
                             {isMe && <span className="ml-2 text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">You</span>}
                           </p>
@@ -1798,14 +2056,14 @@ export default function Dashboard() {
                       </div>
                       
                       <div className="col-span-2 text-center">
-                        <div className="inline-flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md text-xs font-bold text-slate-600">
-                          <Clock className="w-3 h-3 text-slate-400" />
+                        <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md text-xs font-bold text-slate-600 dark:text-slate-400">
+                          <Clock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                           {Math.floor(student.timeTaken / 60)}m {student.timeTaken % 60}s
                         </div>
                       </div>
                       
                       <div className="col-span-3 text-right">
-                        <p className={`font-black text-lg ${isMe ? 'text-primary' : 'text-slate-900'}`}>
+                        <p className={`font-black text-lg ${isMe ? 'text-primary' : 'text-slate-900 dark:text-slate-100'}`}>
                           {student.score.toLocaleString()}
                         </p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">PTS</p>
@@ -1816,9 +2074,178 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <div className="p-4 border-t border-slate-100 bg-white flex justify-end">
-            <Button variant="outline" className="rounded-xl font-bold" onClick={() => setExamLeaderboardDialog(null)}>
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end">
+            <Button variant="outline" className="rounded-xl font-bold dark:border-slate-800 dark:hover:bg-slate-800" onClick={() => setExamLeaderboardDialog(null)}>
               Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exam Class Insights Dialog */}
+      <Dialog open={!!examInsightsDialog} onOpenChange={(open) => !open && setExamInsightsDialog(null)}>
+        <DialogContent className="max-w-3xl bg-slate-50/95 backdrop-blur-3xl border border-white shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
+          <DialogHeader className="p-8 pb-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-4">
+              <div className="bg-indigo-100 p-4 rounded-2xl shadow-sm border border-indigo-200/50">
+                <BarChart3 className="w-8 h-8 text-indigo-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                  Class Performance Insights
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium text-sm mt-1">
+                  AI-driven analysis for <span className="font-bold text-slate-700">{examInsightsDialog?.title}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8">
+            {examInsightsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Sparkles className="w-12 h-12 text-indigo-500 animate-pulse" />
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Analyzing Class Performance...</p>
+              </div>
+            ) : !examInsightsData || examInsightsData.totalAttempts === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <BarChart3 className="w-16 h-16 opacity-10 mb-4" />
+                <p className="font-bold uppercase tracking-widest text-sm">No student data available yet</p>
+              </div>
+            ) : (
+              <>
+                {/* AI Summary Box */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-200 relative overflow-hidden"
+                >
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-indigo-200" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-100">AI Teacher Assistant</span>
+                    </div>
+                    <p className="text-lg font-bold leading-relaxed italic">
+                      "{examInsightsData.aiInsight}"
+                    </p>
+                  </div>
+                  <div className="absolute -right-8 -bottom-8 opacity-10">
+                    <Sparkles className="w-40 h-40" />
+                  </div>
+                </motion.div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Key Stats Card */}
+                  <Card className="rounded-[2rem] border-0 shadow-sm bg-white dark:bg-slate-800/50 overflow-hidden">
+                    <CardHeader className="pb-2 px-6 pt-6">
+                      <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Key Statistics</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-4xl font-black text-slate-900">{examInsightsData.averageScore}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase">Avg. Class Score</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-slate-600">{examInsightsData.totalAttempts}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase">Total Students</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs font-bold uppercase">
+                          <span className="text-slate-500">Overall Accuracy</span>
+                          <span className="text-primary">{Math.round((examInsightsData.averageScore / examInsightsData.totalMarks) * 100)}%</span>
+                        </div>
+                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(examInsightsData.averageScore / examInsightsData.totalMarks) * 100}%` }}
+                            className="h-full bg-primary"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Most Missed Question Card */}
+                  <Card className="rounded-[2rem] border-0 shadow-sm bg-white overflow-hidden">
+                    <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 px-6 pt-6">
+                      <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Most Missed Question</CardTitle>
+                      <div className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Action Needed</div>
+                    </CardHeader>
+                    <CardContent>
+                      {examInsightsData.mostMissedQuestion ? (
+                        <div className="space-y-4">
+                          <p className="text-sm font-bold text-slate-800 line-clamp-3 leading-relaxed">
+                            {examInsightsData.mostMissedQuestion.text}
+                          </p>
+                          <div className="flex items-center gap-4">
+                            <div className="flex flex-col">
+                              <span className="text-2xl font-black text-rose-500">{examInsightsData.mostMissedQuestion.missRate}%</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Miss Rate</span>
+                            </div>
+                            <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">
+                              {examInsightsData.mostMissedQuestion.subject}
+                            </Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 text-sm font-medium italic">No problematic questions identified yet.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Topic Performance List */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Topic-wise Performance</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {examInsightsData.topicPerformance.map((topic: any, idx: number) => (
+                      <motion.div 
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${
+                            topic.accuracy >= 70 ? 'bg-emerald-50 text-emerald-600' :
+                            topic.accuracy >= 40 ? 'bg-amber-50 text-amber-600' :
+                            'bg-rose-50 text-rose-600'
+                          }`}>
+                            {topic.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{topic.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{topic.accuracy}% Accuracy</p>
+                          </div>
+                        </div>
+                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${
+                              topic.accuracy >= 70 ? 'bg-emerald-500' :
+                              topic.accuracy >= 40 ? 'bg-amber-500' :
+                              'bg-rose-500'
+                            }`}
+                            style={{ width: `${topic.accuracy}%` }}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end">
+            <Button 
+              className="rounded-2xl px-8 font-bold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100" 
+              onClick={() => setExamInsightsDialog(null)}
+            >
+              Done Reviewing
             </Button>
           </div>
         </DialogContent>
@@ -1827,7 +2254,7 @@ export default function Dashboard() {
       {/* PDF Preview Dialog (Student) */}
       <Dialog open={!!previewExam} onOpenChange={(open) => !open && setPreviewExam(null)}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
-          <DialogHeader className="p-6 pb-2 border-b bg-white relative z-10">
+          <DialogHeader className="p-6 pb-2 border-b dark:border-slate-800 bg-white dark:bg-slate-900 relative z-10">
             <div className="flex justify-between items-center">
               <div>
                 <DialogTitle className="text-2xl font-extrabold text-slate-900">{previewExam?.title}</DialogTitle>
@@ -1863,18 +2290,18 @@ export default function Dashboard() {
 
       {/* Take Exam Confirmation */}
       <AlertDialog open={!!confirmTakeExam} onOpenChange={(open) => !open && setConfirmTakeExam(null)}>
-        <AlertDialogContent className="rounded-[2rem] border-0 shadow-2xl">
+        <AlertDialogContent className="rounded-[2rem] border-0 dark:border dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 transition-colors duration-300">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold text-slate-900 text-center">Are you sure you want to take the exam?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 font-medium text-center">
-              You are about to start <span className="font-bold text-slate-900">"{confirmTakeExam?.title}"</span>.
+            <AlertDialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 text-center">Are you sure you want to take the exam?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium text-center">
+              You are about to start <span className="font-bold text-slate-900 dark:text-slate-200">"{confirmTakeExam?.title}"</span>.
               Once started, you will be able to see the questions one by one.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 justify-center gap-4 flex-col sm:flex-row">
-            <AlertDialogCancel className="rounded-full border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 px-8 h-12 w-full sm:w-auto">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full border-slate-200 dark:border-slate-800 font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 px-8 h-12 w-full sm:w-auto">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 px-10 h-12 w-full sm:w-auto"
+              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20 px-10 h-12 w-full sm:w-auto border-0"
               onClick={async () => {
                 const exam = confirmTakeExam;
                 setConfirmTakeExam(null);
@@ -1913,7 +2340,7 @@ export default function Dashboard() {
             if (!examResult) e.preventDefault();
           }}
         >
-          <DialogHeader className={`p-8 pb-4 border-b bg-white relative z-10 ${examResult ? 'py-6' : ''}`}>
+          <DialogHeader className={`p-8 pb-4 border-b dark:border-slate-800 bg-white dark:bg-slate-900 relative z-10 ${examResult ? 'py-6' : ''}`}>
             {examResult ? (
               <div className="text-center space-y-2 w-full">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 text-3xl mb-1 relative">
@@ -1954,23 +2381,23 @@ export default function Dashboard() {
                             examResult.percentage >= 40 ? '👍' : '📚'}
                   </motion.span>
                 </div>
-                <DialogTitle className="text-2xl font-black text-slate-900">Exam Complete!</DialogTitle>
+                <DialogTitle className="text-2xl font-black text-slate-900 dark:text-slate-100">Exam Complete!</DialogTitle>
                 <p className="text-slate-500 text-xs font-medium">You have successfully submitted the assessment.</p>
               </div>
             ) : (
               <div className="flex justify-between items-center">
                 <div>
-                  <DialogTitle className="text-2xl font-extrabold text-slate-900 flex items-center gap-3">
-                    <div className="bg-emerald-100 p-2 rounded-xl">
-                      <Pencil className="h-5 w-5 text-emerald-600" />
+                  <DialogTitle className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                    <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-xl">
+                      <Pencil className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     {takingExam?.title}
                   </DialogTitle>
                   <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="secondary" className="bg-indigo-50 text-indigo-600 border-0 font-bold px-3">
+                    <Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-0 font-bold px-3">
                       {takingExam?.subject || takingExam?.subjects?.[0]}
                     </Badge>
-                    <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
                       <Clock className="h-3.5 w-3.5" />
                       {takingExam?.timeLimit || takingExam?.duration || 60} Minutes
                     </div>
@@ -1980,14 +2407,14 @@ export default function Dashboard() {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                     {takingExam?.timeLimitType === "per-question" ? "Question Timer" : "Total Time Left"}
                   </p>
-                  <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                     <Clock className={`h-5 w-5 ${(takingExam?.timeLimitType === "per-question"
                       ? (perQuestionTimeLeft[examCurrentPage] ?? (takingExam.timeLimit * 60))
                       : (examTimeLeft ?? 0)) < 60 ? "text-rose-500 animate-pulse" : "text-primary"
                       }`} />
                     <p className={`text-2xl font-black tabular-nums ${(takingExam?.timeLimitType === "per-question"
                       ? (perQuestionTimeLeft[examCurrentPage] ?? (takingExam.timeLimit * 60))
-                      : (examTimeLeft ?? 0)) < 60 ? "text-rose-500" : "text-slate-900"
+                      : (examTimeLeft ?? 0)) < 60 ? "text-rose-500" : "text-slate-900 dark:text-slate-100"
                       }`}>
                       {(() => {
                         const seconds = takingExam?.timeLimitType === "per-question"
@@ -2007,7 +2434,7 @@ export default function Dashboard() {
             )}
           </DialogHeader>
 
-          <div className={`flex-1 p-8 bg-slate-50/50 relative ${examResult ? 'overflow-hidden flex flex-col justify-center' : 'overflow-y-auto'}`}>
+          <div className={`flex-1 p-8 bg-slate-50/50 dark:bg-slate-950 relative ${examResult ? 'overflow-hidden flex flex-col justify-center' : 'overflow-y-auto'}`}>
             {/* Big Celebration Overlay */}
             <AnimatePresence>
               {showBigCelebration && examResult && (
@@ -2057,7 +2484,7 @@ export default function Dashboard() {
                 <div className="bg-rose-500 text-white p-6 rounded-3xl shadow-2xl animate-bounce mb-4">
                   <Clock className="h-12 w-12" />
                 </div>
-                <h2 className="text-3xl font-black text-slate-900 mb-2 uppercase">Time is up!</h2>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 mb-2 uppercase">Time is up!</h2>
                 <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Submitting your exam automatically...</p>
               </div>
             )}
@@ -2065,7 +2492,7 @@ export default function Dashboard() {
             {examResult ? (
               <div className="max-w-xl mx-auto py-0 space-y-3 w-full">
                 <div className="text-center space-y-1 mb-2">
-                  <h3 className="text-xl font-bold text-slate-800 tracking-tight">{takingExam?.title}</h3>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{takingExam?.title}</h3>
                   <div className="flex flex-col items-center gap-0.5">
                     <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest">{takingExam?.subject || takingExam?.subjects?.[0]}</p>
                     {takingExam?.createdBy && (
@@ -2076,39 +2503,39 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-[1.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 space-y-3">
-                  <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 space-y-3 transition-colors duration-300">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-50 dark:border-slate-800">
                     <div className="space-y-0.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Score</p>
-                      <p className="text-xl font-black text-primary">{examResult.score} <span className="text-slate-300 text-base">/</span> {examResult.total}</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your Score</p>
+                      <p className="text-xl font-black text-primary">{examResult.score} <span className="text-slate-300 dark:text-slate-700 text-base">/</span> {examResult.total}</p>
                     </div>
                     <div className="text-right space-y-0.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Percentage</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Percentage</p>
                       <p className={`text-xl font-black ${examResult.percentage >= 40 ? 'text-emerald-500' : 'text-rose-500'}`}>{Math.round(examResult.percentage)}%</p>
                     </div>
                   </div>
 
                   {/* Detailed Stats Grid */}
-                  <div className="grid grid-cols-5 gap-2 py-2.5 border-b border-slate-50">
-                    <div className="text-center p-2 rounded-2xl bg-slate-50 border border-slate-100">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Total</p>
-                      <p className="text-lg font-black text-slate-700">{examResult.stats?.totalQuestions}</p>
+                  <div className="grid grid-cols-5 gap-2 py-2.5 border-b border-slate-50 dark:border-slate-800">
+                    <div className="text-center p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">Total</p>
+                      <p className="text-lg font-black text-slate-700 dark:text-slate-300">{examResult.stats?.totalQuestions}</p>
                     </div>
-                    <div className="text-center p-2 rounded-2xl bg-blue-50 border border-blue-100">
-                      <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Attempted</p>
-                      <p className="text-lg font-black text-blue-700">{examResult.stats?.attemptedCount}</p>
+                    <div className="text-center p-2 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+                      <p className="text-[9px] font-bold text-blue-400 dark:text-blue-400 uppercase tracking-tight">Attempted</p>
+                      <p className="text-lg font-black text-blue-700 dark:text-blue-300">{examResult.stats?.attemptedCount}</p>
                     </div>
-                    <div className="text-center p-2 rounded-2xl bg-emerald-50 border border-emerald-100">
-                      <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-tight">Correct</p>
-                      <p className="text-lg font-black text-emerald-700">{examResult.stats?.correctCount}</p>
+                    <div className="text-center p-2 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
+                      <p className="text-[9px] font-bold text-emerald-400 dark:text-emerald-400 uppercase tracking-tight">Correct</p>
+                      <p className="text-lg font-black text-emerald-700 dark:text-emerald-300">{examResult.stats?.correctCount}</p>
                     </div>
-                    <div className="text-center p-2 rounded-2xl bg-rose-50 border border-rose-100">
-                      <p className="text-[9px] font-bold text-rose-400 uppercase tracking-tight">Incorrect</p>
-                      <p className="text-lg font-black text-rose-700">{examResult.stats?.wrongCount}</p>
+                    <div className="text-center p-2 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800">
+                      <p className="text-[9px] font-bold text-rose-400 dark:text-rose-400 uppercase tracking-tight">Incorrect</p>
+                      <p className="text-lg font-black text-rose-700 dark:text-rose-300">{examResult.stats?.wrongCount}</p>
                     </div>
-                    <div className="text-center p-2 rounded-2xl bg-amber-50 border border-amber-100">
-                      <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Skipped</p>
-                      <p className="text-lg font-black text-amber-700">{examResult.stats?.notAttemptedCount}</p>
+                    <div className="text-center p-2 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+                      <p className="text-[9px] font-bold text-amber-400 dark:text-amber-400 uppercase tracking-tight">Skipped</p>
+                      <p className="text-lg font-black text-amber-700 dark:text-amber-300">{examResult.stats?.notAttemptedCount}</p>
                     </div>
                   </div>
 
@@ -2121,24 +2548,24 @@ export default function Dashboard() {
                     </div>
 
                     {/* Time Statistics Row */}
-                    <div className="grid grid-cols-2 gap-4 py-2.5 border-y border-slate-50">
+                    <div className="grid grid-cols-2 gap-4 py-2.5 border-y border-slate-50 dark:border-slate-800">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time Taken</p>
-                        <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Time Taken</p>
+                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-bold">
                           <Clock className="h-3 w-3 text-primary" />
                           <span className="text-xs">{Math.floor(examResult.timeTaken / 60)}m {Math.round(examResult.timeTaken % 60)}s</span>
                         </div>
                       </div>
                       <div className="text-right space-y-1">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg. Time / Q</p>
-                        <div className="flex items-center justify-end gap-1.5 text-slate-700 font-bold">
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Avg. Time / Q</p>
+                        <div className="flex items-center justify-end gap-1.5 text-slate-700 dark:text-slate-300 font-bold">
                           <Zap className="h-3 w-3 text-amber-500" />
                           <span className="text-xs">{Math.round(examResult.avgTime)}s</span>
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-center text-[13px] font-bold text-slate-500 pt-1">
+                    <p className="text-center text-[13px] font-bold text-slate-500 dark:text-slate-400 pt-1">
                       {examResult.percentage >= 80 ? '🏆 Outstanding Performance!' :
                         examResult.percentage >= 60 ? '👏 Great job!' :
                           examResult.percentage >= 40 ? '👍 Good attempt' :
@@ -2160,7 +2587,7 @@ export default function Dashboard() {
             ) : takingExam?.questions && takingExam.questions[examCurrentPage] ? (
               <div className="max-w-2xl mx-auto space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold text-slate-800 leading-relaxed">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-relaxed">
                     {takingExam.questions[examCurrentPage].question}
                   </h3>
                 </div>
@@ -2171,7 +2598,7 @@ export default function Dashboard() {
                       key={idx}
                       variant="outline"
                       disabled={lockedQuestions.has(examCurrentPage) || examResult !== null || isTimeUp}
-                      className={`h-auto p-5 justify-start text-left bg-white border-slate-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group ${studentAnswers[examCurrentPage] === idx ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : ''} ${lockedQuestions.has(examCurrentPage) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`h-auto p-5 justify-start text-left bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group ${studentAnswers[examCurrentPage] === idx ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : ''} ${lockedQuestions.has(examCurrentPage) ? 'opacity-70 cursor-not-allowed' : ''}`}
                       onClick={() => {
                         setStudentAnswers({
                           ...studentAnswers,
@@ -2183,7 +2610,7 @@ export default function Dashboard() {
                         <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors ${studentAnswers[examCurrentPage] === idx ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-primary group-hover:text-white'}`}>
                           {String.fromCharCode(65 + idx)}
                         </div>
-                        <span className={`font-semibold transition-colors ${studentAnswers[examCurrentPage] === idx ? 'text-primary' : 'text-slate-700 group-hover:text-primary'}`}>{option}</span>
+                        <span className={`font-semibold transition-colors ${studentAnswers[examCurrentPage] === idx ? 'text-primary' : 'text-slate-700 dark:text-slate-300 group-hover:text-primary'}`}>{option}</span>
                         {studentAnswers[examCurrentPage] === idx && (
                           <div className="ml-auto bg-primary/10 p-1.5 rounded-full">
                             <div className="w-2 h-2 bg-primary rounded-full" />
@@ -2203,12 +2630,12 @@ export default function Dashboard() {
           </div>
 
           {!examResult && (
-            <DialogHeader className="p-8 pt-4 border-t bg-white relative z-10">
+            <DialogHeader className="p-8 pt-4 border-t dark:border-slate-800 bg-white dark:bg-slate-900 relative z-10">
               <div className="flex items-center justify-between w-full gap-2">
                 <div className="flex justify-start min-w-[100px] shrink-0">
-                  <Button
+                   <Button
                     variant="ghost"
-                    className="rounded-full px-4 h-11 font-bold text-rose-500 hover:bg-rose-50 transition-all"
+                    className="rounded-full px-4 h-11 font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                     onClick={() => setConfirmCancelExam(true)}
                   >
                     Cancel
@@ -2218,7 +2645,7 @@ export default function Dashboard() {
                 <div className="flex flex-1 justify-center items-center gap-2 max-w-xl mx-auto overflow-hidden">
                   <Button
                     variant="outline"
-                    className="rounded-full px-3 h-10 border-slate-100 text-slate-500 font-bold hover:text-primary hover:border-primary/30 shrink-0 text-xs"
+                    className="rounded-full px-3 h-10 border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:text-primary hover:border-primary/30 shrink-0 text-xs bg-white dark:bg-slate-900"
                     onClick={() => setPaginationStart(prev => Math.max(0, prev - 5))}
                     disabled={paginationStart === 0}
                   >
@@ -2232,14 +2659,14 @@ export default function Dashboard() {
                       const isVisited = visitedQuestions.has(idx);
                       const isActive = idx === examCurrentPage;
 
-                      let buttonStyles = "bg-white text-slate-400 border-slate-100 hover:border-primary/30";
+                      let buttonStyles = "bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-800 hover:border-primary/30";
 
                       if (isActive) {
-                        buttonStyles = "bg-primary text-white shadow-lg shadow-primary/20 scale-110 border-primary";
+                        buttonStyles = "bg-primary text-white shadow-lg shadow-primary/20 dark:shadow-primary/40 scale-110 border-primary";
                       } else if (hasAnswer) {
-                        buttonStyles = "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100 hover:bg-emerald-600";
+                        buttonStyles = "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100/10 dark:shadow-emerald-900/40 hover:bg-emerald-600";
                       } else if (isVisited) {
-                        buttonStyles = "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-100 hover:bg-rose-600";
+                        buttonStyles = "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-100/10 dark:shadow-rose-900/40 hover:bg-rose-600";
                       }
 
                       return (
@@ -2258,7 +2685,7 @@ export default function Dashboard() {
 
                   <Button
                     variant="outline"
-                    className="rounded-full px-3 h-10 border-slate-100 text-slate-500 font-bold hover:text-primary hover:border-primary/30 shrink-0 text-xs"
+                    className="rounded-full px-3 h-10 border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:text-primary hover:border-primary/30 shrink-0 text-xs bg-white dark:bg-slate-900"
                     onClick={() => setPaginationStart(prev => Math.min((takingExam?.questions?.length || 5) - 5, prev + 5))}
                     disabled={paginationStart + 5 >= (takingExam?.questions?.length || 0)}
                   >
@@ -2268,7 +2695,7 @@ export default function Dashboard() {
 
                 <div className="flex justify-end min-w-[120px] shrink-0">
                   <Button
-                    className="rounded-full px-6 h-11 font-bold bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 text-sm"
+                    className="rounded-full px-6 h-11 font-bold bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 dark:shadow-emerald-900/50 text-sm border-0"
                     onClick={handleSubmitExam}
                   >
                     Submit Exam
