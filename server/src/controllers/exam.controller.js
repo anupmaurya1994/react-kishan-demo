@@ -9,6 +9,8 @@ import { extractTextFromFile } from "../utils/extractText.js";
 import { generateQuestionsFromText } from "../utils/aiQuestionGenerator.js";
 import { storeTextToVector } from "../utils/vectorStore.js";
 import { generateExamPDF } from "../utils/pdfGenerator.js";
+import llm from "../config/llm.js";
+import { HumanMessage } from "@langchain/core/messages";
 import path from "path";
 import fs from "fs";
 
@@ -1036,7 +1038,7 @@ export const getExamById = async (req, res) => {
 export const studentGetAllExams = async (req, res) => {
   try {
     const publishedExams = await PublishedExam.find()
-      .populate("createdBy", "firstName lastName")
+      .populate("createdBy", "firstName lastName university college")
       .sort({ publishedAt: -1 })
       .lean();
 
@@ -1212,8 +1214,22 @@ export const getExamLeaderboard = async (req, res) => {
   try {
     const { examId } = req.params;
 
+    // 1. Find the relevant PublishedExam ID
+    // Teachers might pass the original Exam ID, while students pass the PublishedExam ID.
+    // We need to match Attempt.examId which is always the PublishedExam._id.
+    const publishedExam = await PublishedExam.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null },
+        { examId: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null }
+      ]
+    });
+
+    if (!publishedExam) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
     const leaderboard = await Attempt.aggregate([
-      { $match: { examId: new mongoose.Types.ObjectId(examId) } },
+      { $match: { examId: publishedExam._id } },
       {
         $lookup: {
           from: "users",
@@ -1292,6 +1308,11 @@ export const getStudentProfile = async (req, res) => {
         $project: {
           score: 1,
           totalMarks: 1,
+          completedAt: 1,
+          exam: {
+            title: "$exam.title",
+            subject: "$exam.subject"
+          },
           difficulty: { $toLower: "$exam.difficulty" },
           percentage: {
             $cond: [
@@ -1329,7 +1350,31 @@ export const getStudentProfile = async (req, res) => {
       total: badges.length
     };
 
-    // Fetch user name - Accessing model via mongoose to avoid import issues
+    // Calculate Real Rank
+    const studentPoints = await Attempt.aggregate([
+      { $match: { studentId: studentObjId } },
+      { $group: { _id: null, total: { $sum: "$score" } } }
+    ]);
+    const myPoints = studentPoints[0]?.total || 0;
+
+    const rank = await Attempt.aggregate([
+      { $group: { _id: "$studentId", total: { $sum: "$score" } } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userDetails"
+        }
+      },
+      { $unwind: "$userDetails" },
+      { $match: { "userDetails.role": "student", total: { $gt: myPoints } } },
+      { $count: "higherCount" }
+    ]);
+    const globalRank = (rank[0]?.higherCount || 0) + 1;
+    const totalStudentsCount = await User.countDocuments({ role: "student" });
+
+    // Fetch user details
     const student = await User.findById(studentId).select("firstName lastName email");
 
     if (!student) {
@@ -1347,7 +1392,18 @@ export const getStudentProfile = async (req, res) => {
         easyExams,
         mediumExams,
         hardExams,
-        badgeCounts
+        badgeCounts,
+        rank: globalRank,
+        totalStudents: totalStudentsCount,
+        attempts: attempts.map(a => ({
+          _id: a._id,
+          title: a.exam?.title || "Unknown Exam",
+          subject: a.exam?.subject || "General",
+          score: a.score,
+          totalMarks: a.totalMarks,
+          percentage: Math.round(a.percentage),
+          date: a.completedAt
+        }))
       }
     });
   } catch (error) {
@@ -1486,6 +1542,158 @@ export const getLeaderboard = async (req, res) => {
       data: ranked,
       cached: false,
       nextUpdate: new Date(lastUpdated + CACHE_DURATION)
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   GET EXAM INSIGHTS (TEACHER)
+========================= */
+export const getExamInsights = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    // 1. Resolve PublishedExam
+    const publishedExam = await PublishedExam.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null },
+        { examId: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null }
+      ]
+    }).populate("questions.questionId");
+
+    if (!publishedExam) {
+      return res.status(404).json({ success: false, message: "Exam not found" });
+    }
+
+    // Security check
+    if (publishedExam.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    // 2. Fetch all attempts
+    const attempts = await Attempt.find({ examId: publishedExam._id });
+
+    if (attempts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalAttempts: 0,
+          averageScore: 0,
+          mostMissedQuestion: null,
+          topicPerformance: [],
+          aiInsight: "No attempts yet to generate insights."
+        }
+      });
+    }
+
+    // 3. Calculate Stats
+    const totalAttempts = attempts.length;
+    const totalScore = attempts.reduce((sum, a) => sum + a.score, 0);
+    const avgScore = (totalScore / totalAttempts).toFixed(1);
+
+    // Per-question stats
+    const questionStats = {}; // questionId -> { text, correct, total, subject }
+    
+    // Initialize stats from publishedExam questions
+    publishedExam.questions.forEach(q => {
+      questionStats[q.questionId.toString()] = {
+        text: q.text,
+        correct: 0,
+        total: 0,
+        subject: "General" // Fallback
+      };
+    });
+
+    // We need to fetch original questions to get the subject
+    const originalQuestionIds = publishedExam.questions.map(q => q.questionId);
+    const originalQuestions = await Question.find({ _id: { $in: originalQuestionIds } });
+    originalQuestions.forEach(q => {
+      if (questionStats[q._id.toString()]) {
+        questionStats[q._id.toString()].subject = q.subject || "General";
+      }
+    });
+
+    // Aggregate from attempts
+    attempts.forEach(attempt => {
+      attempt.answers.forEach(ans => {
+        const qId = ans.questionId.toString();
+        if (questionStats[qId]) {
+          questionStats[qId].total++;
+          if (ans.isCorrect) {
+            questionStats[qId].correct++;
+          }
+        }
+      });
+    });
+
+    // Identify Most Missed
+    let mostMissed = null;
+    let highestMissRate = 0;
+
+    const topicStats = {}; // subject -> { correct, total }
+
+    Object.entries(questionStats).forEach(([id, stats]) => {
+      const missRate = stats.total > 0 ? (stats.total - stats.correct) / stats.total : 0;
+      if (missRate > highestMissRate) {
+        highestMissRate = missRate;
+        mostMissed = {
+          id,
+          text: stats.text,
+          missRate: (missRate * 100).toFixed(1),
+          subject: stats.subject
+        };
+      }
+
+      // Topic aggregation
+      if (!topicStats[stats.subject]) {
+        topicStats[stats.subject] = { correct: 0, total: 0 };
+      }
+      topicStats[stats.subject].correct += stats.correct;
+      topicStats[stats.subject].total += stats.total;
+    });
+
+    const topicPerformance = Object.entries(topicStats).map(([name, stats]) => ({
+      name,
+      accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
+    })).sort((a, b) => b.accuracy - a.accuracy);
+
+    // 4. AI Insight Generation
+    let aiInsight = "Class is performing steadily. Focus on general revision.";
+    try {
+      const topTopics = topicPerformance.filter(t => t.accuracy >= 70).map(t => t.name);
+      const weakTopics = topicPerformance.filter(t => t.accuracy < 50).map(t => t.name);
+      
+      const prompt = `
+        As an AI Education Assistant, analyze these class results for the exam "${publishedExam.title}":
+        - Total Students: ${totalAttempts}
+        - Average Class Score: ${avgScore}/${publishedExam.totalMarks}
+        - Strong Topics (Accuracy > 70%): ${topTopics.join(", ") || "None yet"}
+        - Weak Topics (Accuracy < 50%): ${weakTopics.join(", ") || "None yet"}
+        - Most Missed Question: "${mostMissed?.text}" (Subject: ${mostMissed?.subject}, Miss Rate: ${mostMissed?.missRate}%)
+
+        Write a 2-sentence professional insight for the teacher. 
+        Sentence 1: Summarize where the class is struggling/excelling.
+        Sentence 2: Give a specific actionable suggestion for the next lecture.
+      `;
+
+      const response = await llm.invoke([new HumanMessage(prompt)]);
+      aiInsight = response.content.trim();
+    } catch (aiErr) {
+      console.error("AI Insight Generation Failed:", aiErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalAttempts,
+        averageScore: avgScore,
+        totalMarks: publishedExam.totalMarks,
+        mostMissedQuestion: mostMissed,
+        topicPerformance,
+        aiInsight
+      }
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

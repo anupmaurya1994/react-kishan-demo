@@ -23,7 +23,8 @@ import {
   retakeExam,
   getLeaderboard,
   getExamLeaderboard,
-  getStudentProfile
+  getStudentProfile,
+  getExamInsights
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -155,6 +156,13 @@ router.get(
   "/:examId/status",
   protect,
   getExamStatus
+);
+
+// GET EXAM INSIGHTS (NEW)
+router.get(
+  "/:examId/insights",
+  protect,
+  getExamInsights
 );
 
 // DELETE EXAM (Teacher only)
