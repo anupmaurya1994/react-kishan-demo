@@ -24,7 +24,8 @@ import {
   getLeaderboard,
   getExamLeaderboard,
   getStudentProfile,
-  getExamInsights
+  getExamInsights,
+  getExamStudentResults
 } from "../controllers/exam.controller.js";
 
 import { upload } from "../middleware/upload.js";
@@ -163,6 +164,13 @@ router.get(
   "/:examId/insights",
   protect,
   getExamInsights
+);
+
+// GET EXAM STUDENT RESULTS (NEW)
+router.get(
+  "/:examId/student-results",
+  protect,
+  getExamStudentResults
 );
 
 // DELETE EXAM (Teacher only)

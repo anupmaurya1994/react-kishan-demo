@@ -2,7 +2,7 @@ import Attempt from "../models/Attempt.js";
 import Badge from "../models/Badge.js";
 import cron from "node-cron";
 
-const calculateLeaderboardAndAwardBadges = async (timeframe) => {
+export const calculateLeaderboardAndAwardBadges = async (timeframe) => {
   try {
     const now = new Date();
     const matchStage = {};
@@ -49,6 +49,16 @@ const calculateLeaderboardAndAwardBadges = async (timeframe) => {
 
     const leaderboard = await Attempt.aggregate([
       { $match: matchStage },
+      {
+        $lookup: {
+          from: "users",
+          localField: "studentId",
+          foreignField: "_id",
+          as: "userDetails"
+        }
+      },
+      { $unwind: "$userDetails" },
+      { $match: { "userDetails.role": "student" } },
       {
         $group: {
           _id: "$studentId",
@@ -101,7 +111,26 @@ const calculateLeaderboardAndAwardBadges = async (timeframe) => {
   }
 };
 
+/**
+ * Checks if badges for the current pending periods (last week/month) 
+ * have been awarded. If not, awards them.
+ */
+const checkAndAwardMissingBadges = async () => {
+  console.log("Checking for missing badge awards on startup...");
+  try {
+    // Check weekly
+    await calculateLeaderboardAndAwardBadges("weekly");
+    // Check monthly
+    await calculateLeaderboardAndAwardBadges("monthly");
+  } catch (err) {
+    console.error("Error during startup badge check:", err);
+  }
+};
+
 export const initCronJobs = () => {
+  // Check on startup in case server was down during the cron window
+  checkAndAwardMissingBadges();
+
   // Run every Monday at 5:30 AM IST
   cron.schedule("30 5 * * 1", () => {
     console.log("Running weekly badge awarding job...");

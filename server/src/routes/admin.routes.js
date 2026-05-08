@@ -5,7 +5,8 @@ import {
   getAllStudents, 
   deleteStudent,
   getAllTeachers,
-  deleteTeacher
+  deleteTeacher,
+  triggerBadges
 } from "../controllers/admin.controller.js";
 import { protect, admin } from "../middleware/auth.js";
 
@@ -21,5 +22,6 @@ router.get("/students", getAllStudents);
 router.delete("/students/:id", deleteStudent);
 router.get("/teachers", getAllTeachers);
 router.delete("/teachers/:id", deleteTeacher);
+router.post("/badges/trigger", triggerBadges);
 
 export default router;
