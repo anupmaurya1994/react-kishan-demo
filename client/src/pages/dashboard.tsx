@@ -639,6 +639,9 @@ export default function Dashboard() {
   const [examInsightsDialog, setExamInsightsDialog] = useState<any>(null);
   const [examInsightsData, setExamInsightsData] = useState<any>(null);
   const [examInsightsLoading, setExamInsightsLoading] = useState(false);
+  const [examStudentResultsDialog, setExamStudentResultsDialog] = useState<any>(null);
+  const [examStudentResultsData, setExamStudentResultsData] = useState<any[]>([]);
+  const [examStudentResultsLoading, setExamStudentResultsLoading] = useState(false);
 
   const handleViewExamLeaderboard = async (e: React.MouseEvent, exam: any) => {
     e.stopPropagation();
@@ -672,6 +675,24 @@ export default function Dashboard() {
       toast.error("Failed to load exam insights");
     } finally {
       setExamInsightsLoading(false);
+    }
+  };
+
+  const handleViewExamStudentResults = async (e: React.MouseEvent, exam: any) => {
+    e.stopPropagation();
+    setExamStudentResultsDialog(exam);
+    setExamStudentResultsLoading(true);
+    setExamStudentResultsData([]);
+    try {
+      const res = await apiRequest("GET", `/api/exams/${exam._id}/student-results`);
+      const data = await res.json();
+      if (data.success) {
+        setExamStudentResultsData(data.data);
+      }
+    } catch (err) {
+      toast.error("Failed to load student results");
+    } finally {
+      setExamStudentResultsLoading(false);
     }
   };
 
@@ -737,6 +758,9 @@ export default function Dashboard() {
   const [perQuestionTimeLeft, setPerQuestionTimeLeft] = useState<Record<number, number>>({});
   const [lockedQuestions, setLockedQuestions] = useState<Set<number>>(new Set());
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const teacherIdParam = new URLSearchParams(window.location.search).get('teacherId');
+  const [activeTeacherFilter, setActiveTeacherFilter] = useState<string | null>(teacherIdParam);
+
   const [examFilter, setExamFilter] = useState<'all' | 'completed' | 'not_completed' | 'published' | 'draft'>(
     (localStorage.getItem('dashboard_exam_filter') as any) || 'all'
   );
@@ -771,6 +795,9 @@ export default function Dashboard() {
       if (!title.includes(q) && !subject.includes(q) && !creator.includes(q)) return false;
     }
 
+    // Teacher filtering is now done server-side via the API query param;
+    // no client-side filter needed here.
+
     if (user?.role === "student") {
       if (examFilter === 'all') return true;
       if (examFilter === 'completed') return (exam as any).isCompleted;
@@ -797,10 +824,19 @@ export default function Dashboard() {
 
   // FETCH EXAMS FROM BACKEND
 
-  const fetchExams = async () => {
+  const fetchExams = async (teacherFilter?: string | null) => {
     try {
       setLoading(true);
-      const endpoint = user?.role === "admin" ? "/api/admin/exams" : (user?.role === "student" ? "/api/exams/student/all" : "/api/exams");
+      let endpoint: string;
+      if (user?.role === "admin") {
+        endpoint = teacherFilter
+          ? `/api/admin/exams?teacherId=${teacherFilter}`
+          : "/api/admin/exams";
+      } else if (user?.role === "student") {
+        endpoint = "/api/exams/student/all";
+      } else {
+        endpoint = "/api/exams";
+      }
       const res = await apiRequest("GET", endpoint);
       const data = await res.json();
 
@@ -817,9 +853,12 @@ export default function Dashboard() {
     }
   };
 
+  // Re-fetch whenever the teacher filter in the URL changes
   useEffect(() => {
-    fetchExams();
-  }, []);
+    const tid = new URLSearchParams(window.location.search).get('teacherId');
+    setActiveTeacherFilter(tid);
+    fetchExams(tid);
+  }, [window.location.search]);
 
   // const handleDownloadPDF = async (e: React.MouseEvent, exam: Exam) => 
   // { e.stopPropagation(); 
@@ -1394,15 +1433,46 @@ export default function Dashboard() {
 
                 {/* Search bar — only on list pages */}
                 {(location === "/exams" || location === "/exam-lists") && (
-                  <div className="relative mb-4">
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-                    <input
-                      type="text"
-                      placeholder="Search exams by title or subject..."
-                      value={searchQuery}
-                      onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 dark:text-slate-100 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                    />
+                  <div className="flex flex-col gap-4 mb-4">
+                    {activeTeacherFilter && (
+                      <div className="flex items-center justify-between bg-violet-50 dark:bg-violet-900/20 px-6 py-3 rounded-2xl border border-violet-100 dark:border-violet-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-violet-100 dark:bg-violet-800 p-2 rounded-xl">
+                            <User className="h-4 w-4 text-violet-600" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Filtering by Teacher</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                              {exams.find(e => ((e as any).createdBy?._id || (e as any).createdBy) === activeTeacherFilter)?.createdBy?.firstName || "Selected Instructor"}'s Exams
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="rounded-xl text-violet-600 hover:bg-violet-100 dark:hover:bg-violet-800 font-bold"
+                          onClick={() => {
+                            setActiveTeacherFilter(null);
+                            const newParams = new URLSearchParams(window.location.search);
+                            newParams.delete('teacherId');
+                            const newPath = window.location.pathname + (newParams.toString() ? '?' + newParams.toString() : '');
+                            window.history.pushState({}, '', newPath);
+                          }}
+                        >
+                          Clear Filter
+                        </Button>
+                      </div>
+                    )}
+                    <div className="relative">
+                      <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                      <input
+                        type="text"
+                        placeholder="Search exams by title or subject..."
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                        className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/40 font-medium text-slate-700 dark:text-slate-100 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1491,6 +1561,35 @@ export default function Dashboard() {
                             }
                             return;
                           }
+
+                          // For Admin: fetch questions then show student-like preview with full data
+                          if (user?.role === "admin") {
+                            toast.loading("Loading exam preview...", { id: "exam-load" });
+                            try {
+                              const res = await apiRequest("GET", `/api/exams/${exam._id}/questions`);
+                              const data = await res.json();
+                              let questions: any[] = [];
+                              if (data.success && data.data) {
+                                questions = data.data.map((q: any) => ({
+                                  ...q,
+                                  question: q.text || q.question,
+                                  isLocked: q.isApproved || false,
+                                  id: q.id || q._id
+                                }));
+                              }
+                              toast.dismiss("exam-load");
+                              setPreviewExam({
+                                ...exam,
+                                questions,
+                                questionsCount: questions.length,
+                              });
+                            } catch (error) {
+                              toast.dismiss("exam-load");
+                              toast.error("Failed to load exam questions");
+                              setPreviewExam(exam);
+                            }
+                            return;
+                          }
                           toast.loading("Loading exam data...", { id: "exam-load" });
                           try {
                             const res = await apiRequest("GET", `/api/exams/${exam._id}/questions`);
@@ -1568,8 +1667,8 @@ export default function Dashboard() {
                               </Badge>
                             </div>
 
-                            {user?.role === "student" ? (
-                              <div className="flex gap-2">
+                            { (user?.role === "student" || user?.role === "admin") ? (
+                              <div className="flex gap-2 relative z-10">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1578,7 +1677,7 @@ export default function Dashboard() {
                                     e.stopPropagation();
                                     setConfirmTakeExam(exam);
                                   }}
-                                  title="Take Exam"
+                                  title={user?.role === "student" ? "Take Exam" : "Manage Exam"}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -1594,15 +1693,18 @@ export default function Dashboard() {
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
-                                {(exam as any).isCompleted && (
+                                {user?.role === "student" && (exam as any).isCompleted && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
-                                    onClick={(e) => handleViewExamLeaderboard(e, exam)}
-                                    title="View Leaderboard"
+                                    className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setViewingResult(exam);
+                                    }}
+                                    title="View Results"
                                   >
-                                    <Trophy className="h-4 w-4" />
+                                    <BarChart3 className="h-4 w-4" />
                                   </Button>
                                 )}
                               </div>
@@ -1634,6 +1736,17 @@ export default function Dashboard() {
                                         <BarChart3 className="h-4 w-4" />
                                       </div>
                                       View Insights
+                                    </DropdownMenuItem>
+                                  )}
+                                  {exam.status?.toUpperCase() === 'PUBLISHED' && (
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors focus:bg-emerald-50 dark:focus:bg-emerald-900/20 focus:text-emerald-600 dark:focus:text-emerald-400 font-medium"
+                                      onClick={(e) => handleViewExamStudentResults(e, exam)}
+                                    >
+                                      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-lg text-emerald-500">
+                                        <Users className="h-4 w-4" />
+                                      </div>
+                                      Student Results
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem
@@ -1975,6 +2088,77 @@ export default function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Exam Student Results Dialog */}
+      <Dialog open={!!examStudentResultsDialog} onOpenChange={(open) => !open && setExamStudentResultsDialog(null)}>
+        <DialogContent className="max-w-4xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-white dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-0 overflow-hidden rounded-[2.5rem] transition-colors duration-300">
+          <DialogHeader className="p-8 pb-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-emerald-100 to-teal-100 p-4 rounded-2xl shadow-sm border border-emerald-200/50">
+                <Users className="w-8 h-8 text-emerald-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                  Student Results
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1 flex items-center gap-2">
+                  <span className="truncate max-w-[250px] font-bold text-slate-700 dark:text-slate-300">{examStudentResultsDialog?.title}</span> • All student attempts
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-950/30">
+            {examStudentResultsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Spinner className="w-10 h-10 text-primary" />
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Loading Results...</p>
+              </div>
+            ) : examStudentResultsData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <Users className="w-12 h-12 opacity-20 mb-4" />
+                <p className="font-bold uppercase tracking-widest text-sm">No student has completed this exam yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Header Row */}
+                <div className="grid grid-cols-12 gap-4 px-4 pb-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                  <div className="col-span-5">Student</div>
+                  <div className="col-span-3 text-center">Score / Total</div>
+                  <div className="col-span-2 text-center">Percentage</div>
+                  <div className="col-span-2 text-right">Time Taken</div>
+                </div>
+                
+                {examStudentResultsData.map((result: any, index: number) => (
+                  <div key={result._id || index} className="grid grid-cols-12 gap-4 items-center p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 border border-transparent dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm transition-all">
+                    <div className="col-span-5 min-w-0 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-600 dark:text-slate-400">
+                        {result.studentName.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate text-slate-700 dark:text-slate-200">{result.studentName}</p>
+                        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate">{result.studentEmail}</p>
+                      </div>
+                    </div>
+                    <div className="col-span-3 text-center">
+                      <p className="font-black text-sm text-slate-900 dark:text-slate-100">{result.score} <span className="text-[10px] text-slate-400 font-medium">/ {result.totalMarks}</span></p>
+                    </div>
+                    <div className="col-span-2 text-center">
+                      <p className={`font-black text-sm ${result.percentage >= 80 ? 'text-emerald-600 dark:text-emerald-400' : result.percentage >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {result.percentage}%
+                      </p>
+                    </div>
+                    <div className="col-span-2 text-right">
+                      <p className="font-bold text-sm text-slate-600 dark:text-slate-300">
+                        {result.timeTaken ? `${Math.floor(result.timeTaken / 60)}m ${result.timeTaken % 60}s` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Exam Leaderboard Dialog */}
       <Dialog open={!!examLeaderboardDialog} onOpenChange={(open) => !open && setExamLeaderboardDialog(null)}>
         <DialogContent className="max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-white dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-0 overflow-hidden rounded-[2.5rem] transition-colors duration-300">
@@ -2084,31 +2268,31 @@ export default function Dashboard() {
 
       {/* Exam Class Insights Dialog */}
       <Dialog open={!!examInsightsDialog} onOpenChange={(open) => !open && setExamInsightsDialog(null)}>
-        <DialogContent className="max-w-3xl bg-slate-50/95 backdrop-blur-3xl border border-white shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
-          <DialogHeader className="p-8 pb-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <DialogContent className="max-w-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-white dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-0 overflow-hidden rounded-[2.5rem] transition-colors duration-300">
+          <DialogHeader className="p-8 pb-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
             <div className="flex items-center gap-4">
-              <div className="bg-indigo-100 p-4 rounded-2xl shadow-sm border border-indigo-200/50">
-                <BarChart3 className="w-8 h-8 text-indigo-600" />
+              <div className="bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/40 dark:to-violet-900/40 p-4 rounded-2xl shadow-sm border border-indigo-200/50 dark:border-indigo-700/30">
+                <BarChart3 className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                   Class Performance Insights
                 </DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium text-sm mt-1">
-                  AI-driven analysis for <span className="font-bold text-slate-700">{examInsightsDialog?.title}</span>
+                <DialogDescription className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1">
+                  AI-driven analysis for <span className="font-bold text-slate-700 dark:text-slate-300">{examInsightsDialog?.title}</span>
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
           
-          <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8">
+          <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8 bg-slate-50/30 dark:bg-slate-950/30">
             {examInsightsLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Sparkles className="w-12 h-12 text-indigo-500 animate-pulse" />
-                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Analyzing Class Performance...</p>
+                <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Analyzing Class Performance...</p>
               </div>
             ) : !examInsightsData || examInsightsData.totalAttempts === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-600">
                 <BarChart3 className="w-16 h-16 opacity-10 mb-4" />
                 <p className="font-bold uppercase tracking-widest text-sm">No student data available yet</p>
               </div>
@@ -2118,7 +2302,7 @@ export default function Dashboard() {
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-200 relative overflow-hidden"
+                  className="bg-gradient-to-br from-indigo-600 to-violet-700 dark:from-indigo-600/90 dark:to-violet-800/90 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-200 dark:shadow-none border border-transparent dark:border-indigo-500/20 relative overflow-hidden"
                 >
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-3">
@@ -2136,28 +2320,28 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Key Stats Card */}
-                  <Card className="rounded-[2rem] border-0 shadow-sm bg-white dark:bg-slate-800/50 overflow-hidden">
+                  <Card className="rounded-[2rem] border-slate-100 dark:border-slate-800/50 shadow-sm bg-white dark:bg-slate-800/40 overflow-hidden">
                     <CardHeader className="pb-2 px-6 pt-6">
-                      <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Key Statistics</CardTitle>
+                      <CardTitle className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Key Statistics</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-4xl font-black text-slate-900">{examInsightsData.averageScore}</p>
+                          <p className="text-4xl font-black text-slate-900 dark:text-slate-100">{examInsightsData.averageScore}</p>
                           <p className="text-xs font-bold text-slate-400 uppercase">Avg. Class Score</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-black text-slate-600">{examInsightsData.totalAttempts}</p>
+                          <p className="text-2xl font-black text-slate-600 dark:text-slate-300">{examInsightsData.totalAttempts}</p>
                           <p className="text-xs font-bold text-slate-400 uppercase">Total Students</p>
                         </div>
                       </div>
                       
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs font-bold uppercase">
-                          <span className="text-slate-500">Overall Accuracy</span>
+                          <span className="text-slate-500 dark:text-slate-400">Overall Accuracy</span>
                           <span className="text-primary">{Math.round((examInsightsData.averageScore / examInsightsData.totalMarks) * 100)}%</span>
                         </div>
-                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-3 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${(examInsightsData.averageScore / examInsightsData.totalMarks) * 100}%` }}
@@ -2169,15 +2353,15 @@ export default function Dashboard() {
                   </Card>
 
                   {/* Most Missed Question Card */}
-                  <Card className="rounded-[2rem] border-0 shadow-sm bg-white overflow-hidden">
+                  <Card className="rounded-[2rem] border-slate-100 dark:border-slate-800/50 shadow-sm bg-white dark:bg-slate-800/40 overflow-hidden">
                     <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0 px-6 pt-6">
-                      <CardTitle className="text-sm font-black text-slate-400 uppercase tracking-widest">Most Missed Question</CardTitle>
-                      <div className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Action Needed</div>
+                      <CardTitle className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Most Missed Question</CardTitle>
+                      <div className="bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-200 dark:border-rose-800/50">Action Needed</div>
                     </CardHeader>
                     <CardContent>
                       {examInsightsData.mostMissedQuestion ? (
                         <div className="space-y-4">
-                          <p className="text-sm font-bold text-slate-800 line-clamp-3 leading-relaxed">
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-3 leading-relaxed">
                             {examInsightsData.mostMissedQuestion.text}
                           </p>
                           <div className="flex items-center gap-4">
@@ -2185,13 +2369,13 @@ export default function Dashboard() {
                               <span className="text-2xl font-black text-rose-500">{examInsightsData.mostMissedQuestion.missRate}%</span>
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Miss Rate</span>
                             </div>
-                            <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">
+                            <Badge variant="outline" className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
                               {examInsightsData.mostMissedQuestion.subject}
                             </Badge>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-slate-400 text-sm font-medium italic">No problematic questions identified yet.</p>
+                        <p className="text-slate-400 dark:text-slate-500 text-sm font-medium italic">No problematic questions identified yet.</p>
                       )}
                     </CardContent>
                   </Card>
@@ -2199,7 +2383,7 @@ export default function Dashboard() {
 
                 {/* Topic Performance List */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Topic-wise Performance</h3>
+                  <h3 className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Topic-wise Performance</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {examInsightsData.topicPerformance.map((topic: any, idx: number) => (
                       <motion.div 
@@ -2207,22 +2391,22 @@ export default function Dashboard() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between"
+                        className="bg-white dark:bg-slate-800/40 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800/50 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${
-                            topic.accuracy >= 70 ? 'bg-emerald-50 text-emerald-600' :
-                            topic.accuracy >= 40 ? 'bg-amber-50 text-amber-600' :
-                            'bg-rose-50 text-rose-600'
+                            topic.accuracy >= 70 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                            topic.accuracy >= 40 ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
+                            'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
                           }`}>
                             {topic.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-800">{topic.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">{topic.accuracy}% Accuracy</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{topic.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{topic.accuracy}% Accuracy</p>
                           </div>
                         </div>
-                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                           <div 
                             className={`h-full ${
                               topic.accuracy >= 70 ? 'bg-emerald-500' :
@@ -2242,7 +2426,7 @@ export default function Dashboard() {
           
           <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end">
             <Button 
-              className="rounded-2xl px-8 font-bold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100" 
+              className="rounded-2xl px-8 font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 dark:shadow-none" 
               onClick={() => setExamInsightsDialog(null)}
             >
               Done Reviewing

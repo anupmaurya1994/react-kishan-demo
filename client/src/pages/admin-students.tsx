@@ -60,6 +60,24 @@ export default function AdminStudents() {
     const [selectedStudentScores, setSelectedStudentScores] = useState<any>(null);
     const [selectedProfileData, setSelectedProfileData] = useState<any>(null);
     const [profileLoading, setProfileLoading] = useState(false);
+    const [triggeringBadges, setTriggeringBadges] = useState(false);
+
+    const handleTriggerBadges = async (timeframe: "weekly" | "monthly") => {
+        try {
+            setTriggeringBadges(true);
+            const res = await apiRequest("POST", "/api/admin/badges/trigger", { timeframe });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(data.message);
+            } else {
+                toast.error(data.message || "Failed to trigger badge awarding");
+            }
+        } catch (error) {
+            toast.error("Error triggering badge awarding");
+        } finally {
+            setTriggeringBadges(false);
+        }
+    };
 
     const handleViewProfile = async (student: any) => {
         setSelectedStudent(student);
@@ -106,12 +124,7 @@ export default function AdminStudents() {
             }
         } catch (error) {
             toast.error("Failed to fetch students");
-            // Mock data for demo if API fails
-            setStudents([
-                { _id: "1", firstName: "Anup", lastName: "Maurya", email: "anup@example.com", createdAt: "2024-05-01", totalExams: 12, avgScore: 85, lastActive: "2024-05-05" },
-                { _id: "2", firstName: "Kishan", lastName: "Kumar", email: "kishan@example.com", createdAt: "2024-04-15", totalExams: 8, avgScore: 72, lastActive: "2024-05-04" },
-                { _id: "3", firstName: "Priya", lastName: "Sharma", email: "priya@example.com", createdAt: "2024-05-02", totalExams: 5, avgScore: 91, lastActive: "2024-05-05" },
-            ]);
+            setStudents([]);
         } finally {
             setLoading(false);
         }
