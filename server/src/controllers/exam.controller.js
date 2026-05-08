@@ -225,7 +225,8 @@ export const getQuestions = async (req, res) => {
       });
     }
 
-    if (exam.createdBy.toString() !== req.user._id.toString()) {
+    // Allow admin to view any exam's questions; teachers can only view their own
+    if (req.user.role !== "admin" && exam.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
@@ -233,7 +234,7 @@ export const getQuestions = async (req, res) => {
     }
 
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 500; // return all questions by default
     const skip = (page - 1) * limit;
 
     const totalItems = await Question.countDocuments({ examId });
@@ -1694,6 +1695,54 @@ export const getExamInsights = async (req, res) => {
         topicPerformance,
         aiInsight
       }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/* =========================
+   GET EXAM STUDENT RESULTS (TEACHER)
+========================= */
+export const getExamStudentResults = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const publishedExam = await PublishedExam.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null },
+        { examId: mongoose.Types.ObjectId.isValid(examId) ? new mongoose.Types.ObjectId(examId) : null }
+      ]
+    });
+
+    if (!publishedExam) {
+      return res.status(404).json({ success: false, message: "Exam not found" });
+    }
+
+    if (publishedExam.createdBy.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    const attempts = await Attempt.find({ examId: publishedExam._id })
+      .populate("studentId", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    const formattedResults = attempts.map(attempt => ({
+      _id: attempt._id,
+      studentId: attempt.studentId?._id,
+      studentName: attempt.studentId ? `${attempt.studentId.firstName || ""} ${attempt.studentId.lastName || ""}`.trim() : "Unknown Student",
+      studentEmail: attempt.studentId?.email || "No email",
+      score: attempt.score,
+      totalMarks: attempt.totalMarks,
+      percentage: attempt.totalMarks > 0 ? Math.round((attempt.score / attempt.totalMarks) * 100) : 0,
+      timeTaken: attempt.timeTaken,
+      completedAt: attempt.completedAt,
+      status: attempt.status
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedResults
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

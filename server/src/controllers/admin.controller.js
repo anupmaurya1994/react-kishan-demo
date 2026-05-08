@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Exam from "../models/Exam.js";
 import Question from "../models/Question.js";
 import Attempt from "../models/Attempt.js";
+import { calculateLeaderboardAndAwardBadges } from "../utils/cronJobs.js";
 
 export const getStats = async (req, res) => {
   try {
@@ -26,7 +27,10 @@ export const getStats = async (req, res) => {
 
 export const getAllExams = async (req, res) => {
   try {
-    const exams = await Exam.find()
+    const { teacherId } = req.query;
+    const filter = teacherId ? { createdBy: teacherId } : {};
+
+    const exams = await Exam.find(filter)
       .populate("createdBy", "firstName lastName email college city state")
       .sort({ createdAt: -1 });
 
@@ -93,8 +97,8 @@ export const getAllTeachers = async (req, res) => {
       .select("-password -otp -otpExpires")
       .sort({ createdAt: -1 });
 
-    // Aggregate real stats for teachers
-    const teacherStats = await Exam.aggregate([
+    // Aggregate exam counts for teachers
+    const teacherExamStats = await Exam.aggregate([
       {
         $group: {
           _id: "$createdBy",
@@ -103,10 +107,23 @@ export const getAllTeachers = async (req, res) => {
       }
     ]);
 
-    const statsMap = teacherStats.reduce((acc, stat) => {
-      acc[stat._id.toString()] = {
-        totalExams: stat.totalExams
-      };
+    // Aggregate question counts for teachers
+    const teacherQuestionStats = await Question.aggregate([
+      {
+        $group: {
+          _id: "$createdBy",
+          totalQuestions: { $count: {} }
+        }
+      }
+    ]);
+
+    const examStatsMap = teacherExamStats.reduce((acc, stat) => {
+      acc[stat._id.toString()] = stat.totalExams;
+      return acc;
+    }, {});
+
+    const questionStatsMap = teacherQuestionStats.reduce((acc, stat) => {
+      acc[stat._id.toString()] = stat.totalQuestions;
       return acc;
     }, {});
 
@@ -114,8 +131,8 @@ export const getAllTeachers = async (req, res) => {
       success: true,
       data: teachers.map(t => ({
         ...t.toObject(),
-        totalExams: statsMap[t._id.toString()]?.totalExams || 0,
-        totalQuestions: 0, // Questions are nested in exams, hard to count simply without more logic
+        totalExams: examStatsMap[t._id.toString()] || 0,
+        totalQuestions: questionStatsMap[t._id.toString()] || 0,
       }))
     });
   } catch (error) {
@@ -157,6 +174,24 @@ export const deleteStudent = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Student deleted successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const triggerBadges = async (req, res) => {
+  try {
+    const { timeframe } = req.body;
+    if (!["weekly", "monthly"].includes(timeframe)) {
+      return res.status(400).json({ success: false, message: "Invalid timeframe. Use 'weekly' or 'monthly'." });
+    }
+
+    await calculateLeaderboardAndAwardBadges(timeframe);
+
+    return res.status(200).json({
+      success: true,
+      message: `${timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} badges awarded successfully (if not already awarded).`
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
