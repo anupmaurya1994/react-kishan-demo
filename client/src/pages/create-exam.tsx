@@ -171,6 +171,7 @@ export default function CreateExam() {
       sessionStorage.removeItem("isEditingExam");
     } else {
       // RESET everything for a truly new exam
+      sessionStorage.removeItem("current_exam_data"); // Fix: Clear previous exam ID
       reset({
         title: "",
         subject: "",

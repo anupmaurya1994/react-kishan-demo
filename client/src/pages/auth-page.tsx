@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BrainCircuit, Sparkles, BookOpenCheck, Eye, EyeOff, MapPin, Building2, BookOpen, Briefcase, ShieldCheck } from "lucide-react";
+import { BrainCircuit, Sparkles, BookOpenCheck, Eye, EyeOff, MapPin, Building2, BookOpen, Briefcase, ShieldCheck, KeyRound, ArrowLeft, CheckCircle2 } from "lucide-react";
 import authBg from "../assets/images/auth-bg.png";
 import { toast } from "../hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
@@ -15,7 +15,18 @@ import { indianStates, getCitiesForState, getCollegesForCity } from "../data/ind
 export default function AuthPage() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeView, setActiveView] = useState<"student-login" | "student-signup" | "teacher-login" | "teacher-signup" | "teacher-onboarding" | "admin-login">("student-login");
+  const [activeView, setActiveView] = useState<"student-login" | "student-signup" | "teacher-login" | "teacher-signup" | "teacher-onboarding" | "admin-login" | "forgot-password">("student-login");
+
+  // Forgot Password State
+  const [fpStep, setFpStep] = useState<"email" | "otp" | "reset">("email");
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpOtp, setFpOtp] = useState("");
+  const [fpNewPassword, setFpNewPassword] = useState("");
+  const [fpConfirmPassword, setFpConfirmPassword] = useState("");
+  const [fpLoading, setFpLoading] = useState(false);
+  const [fpError, setFpError] = useState("");
+  const [showFpPassword, setShowFpPassword] = useState(false);
+  const [showFpConfirm, setShowFpConfirm] = useState(false);
 
   const [showPassword, setShowPassword] = useState({
     teacherLogin: false,
@@ -288,6 +299,61 @@ export default function AuthPage() {
   //     setIsLoading(false);
   //   }
   // };
+
+  const handleForgotSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const emailErr = validateEmail(fpEmail);
+    if (emailErr) { setFpError(emailErr); return; }
+    setFpError("");
+    setFpLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fpEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFpError(data.message || "Failed to send OTP"); return; }
+      toast({ title: "OTP Sent! 📧", description: "Check your email for the 6-digit OTP." });
+      setFpStep("otp");
+    } catch (err: any) {
+      setFpError(err.message);
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  const handleForgotVerifyOTP = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (fpOtp.length !== 6) { setFpError("Enter the 6-digit OTP"); return; }
+    setFpError("");
+    setFpStep("reset");
+  };
+
+  const handleForgotResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (fpNewPassword.length < 6) { setFpError("Password must be at least 6 characters"); return; }
+    if (fpNewPassword !== fpConfirmPassword) { setFpError("Passwords do not match"); return; }
+    setFpError("");
+    setFpLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fpEmail, otp: fpOtp, newPassword: fpNewPassword, confirmPassword: fpConfirmPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFpError(data.message || "Reset failed"); return; }
+      toast({ title: "Password Reset! 🎉", description: "You can now log in with your new password." });
+      // reset state and go back to login
+      setFpStep("email"); setFpEmail(""); setFpOtp(""); setFpNewPassword(""); setFpConfirmPassword("");
+      setActiveView("teacher-login");
+    } catch (err: any) {
+      setFpError(err.message);
+    } finally {
+      setFpLoading(false);
+    }
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>, role: "teacher" | "student" | "admin") => {
     e.preventDefault();
@@ -707,9 +773,13 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
-                        <a href="#" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => { setFpStep("email"); setFpEmail(loginFields.email); setFpError(""); setActiveView("forgot-password"); }}
+                          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                        >
                           Forgot password?
-                        </a>
+                        </button>
                       </div>
                       <div className="relative">
                         <Input
@@ -911,7 +981,16 @@ export default function AuthPage() {
                       {loginErrors.email && <p className="text-red-500 text-sm">{loginErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="student-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="student-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
+                        <button
+                          type="button"
+                          onClick={() => { setFpStep("email"); setFpEmail(loginFields.email); setFpError(""); setActiveView("forgot-password"); }}
+                          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                       <div className="relative">
                         <Input
                           id="student-password"
@@ -986,7 +1065,16 @@ export default function AuthPage() {
                       {loginErrors.email && <p className="text-red-500 text-sm">{loginErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="admin-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="admin-password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
+                        <button
+                          type="button"
+                          onClick={() => { setFpStep("email"); setFpEmail(loginFields.email); setFpError(""); setActiveView("forgot-password"); }}
+                          className="text-sm font-medium text-indigo-500 hover:text-indigo-400 transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                       <div className="relative">
                         <Input
                           id="admin-password"
@@ -1316,6 +1404,149 @@ export default function AuthPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* ── Forgot Password ─────────────────────────── */}
+            <TabsContent value="forgot-password" className="mt-0">
+              <Card className="border-0 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800">
+                <CardHeader className="space-y-1 pb-6 text-center lg:text-left">
+                  <div className="flex items-center gap-2 mb-2 lg:justify-start justify-center">
+                    <div className="bg-amber-500/10 p-2 rounded-xl">
+                      <KeyRound className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20">
+                      {fpStep === "email" ? "Step 1 of 3" : fpStep === "otp" ? "Step 2 of 3" : "Step 3 of 3"}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                    {fpStep === "email" ? "Forgot Password" : fpStep === "otp" ? "Verify OTP" : "Set New Password"}
+                  </CardTitle>
+                  <CardDescription className="text-slate-500 dark:text-slate-400 font-inter">
+                    {fpStep === "email"
+                      ? "Enter your registered email to receive a 6-digit OTP"
+                      : fpStep === "otp"
+                      ? `We sent a 6-digit OTP to ${fpEmail}`
+                      : "Choose a strong new password for your account"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Step 1: Email */}
+                  {fpStep === "email" && (
+                    <form onSubmit={handleForgotSendOTP} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fp-email" className="text-slate-700 dark:text-slate-300 font-medium">Registered Email</Label>
+                        <Input
+                          id="fp-email"
+                          type="email"
+                          placeholder="your@email.com"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm h-11 text-foreground"
+                          value={fpEmail}
+                          onChange={(e) => { setFpEmail(e.target.value); setFpError(""); }}
+                        />
+                        {fpError && <p className="text-red-500 text-sm">{fpError}</p>}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full rounded-xl h-11 text-base font-semibold bg-amber-500 hover:bg-amber-600 shadow-md shadow-amber-500/20 transition-all duration-300 active:scale-[0.98] text-white"
+                        disabled={fpLoading}
+                      >
+                        {fpLoading ? "Sending OTP..." : "Send OTP to Email"}
+                      </Button>
+                    </form>
+                  )}
+
+                  {/* Step 2: OTP */}
+                  {fpStep === "otp" && (
+                    <form onSubmit={handleForgotVerifyOTP} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fp-otp" className="text-slate-700 dark:text-slate-300 font-medium">Enter 6-digit OTP</Label>
+                        <Input
+                          id="fp-otp"
+                          type="text"
+                          maxLength={6}
+                          placeholder="e.g. 482931"
+                          className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm h-11 text-foreground tracking-[0.4em] text-center text-xl font-bold"
+                          value={fpOtp}
+                          onChange={(e) => { setFpOtp(e.target.value.replace(/\D/g, "")); setFpError(""); }}
+                        />
+                        {fpError && <p className="text-red-500 text-sm">{fpError}</p>}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full rounded-xl h-11 text-base font-semibold bg-amber-500 hover:bg-amber-600 shadow-md shadow-amber-500/20 transition-all duration-300 active:scale-[0.98] text-white"
+                      >
+                        Verify OTP
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => handleForgotSendOTP({ preventDefault: () => {} } as any)}
+                        className="w-full text-center text-sm text-slate-500 hover:text-primary transition-colors"
+                      >
+                        Didn't receive? Resend OTP
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Step 3: New Password */}
+                  {fpStep === "reset" && (
+                    <form onSubmit={handleForgotResetPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fp-new-password" className="text-slate-700 dark:text-slate-300 font-medium">New Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="fp-new-password"
+                            type={showFpPassword ? "text" : "password"}
+                            placeholder="Min. 6 characters"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm h-11 pr-10 text-foreground"
+                            value={fpNewPassword}
+                            onChange={(e) => { setFpNewPassword(e.target.value); setFpError(""); }}
+                          />
+                          <button type="button" onClick={() => setShowFpPassword(!showFpPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {showFpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fp-confirm-password" className="text-slate-700 dark:text-slate-300 font-medium">Confirm Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="fp-confirm-password"
+                            type={showFpConfirm ? "text" : "password"}
+                            placeholder="Re-enter your new password"
+                            className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm h-11 pr-10 text-foreground"
+                            value={fpConfirmPassword}
+                            onChange={(e) => { setFpConfirmPassword(e.target.value); setFpError(""); }}
+                          />
+                          <button type="button" onClick={() => setShowFpConfirm(!showFpConfirm)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {showFpConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        {fpError && <p className="text-red-500 text-sm">{fpError}</p>}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full rounded-xl h-11 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all duration-300 active:scale-[0.98] text-white"
+                        disabled={fpLoading}
+                      >
+                        {fpLoading ? "Resetting..." : "Reset Password"}
+                      </Button>
+                    </form>
+                  )}
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => { setActiveView("teacher-login"); setFpStep("email"); setFpError(""); }}
+                      className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> Back to Login
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
           </Tabs>
 
         </div>

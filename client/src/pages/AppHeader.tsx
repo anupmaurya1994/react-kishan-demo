@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -64,6 +64,44 @@ export default function AppHeader() {
         }
     }, [isDark, user]);
 
+    const toggleTheme = (event: React.MouseEvent) => {
+        const isAppearanceTransition = document.startViewTransition && 
+            !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (!isAppearanceTransition) {
+            setIsDark(!isDark);
+            return;
+        }
+
+        const x = event.clientX;
+        const y = event.clientY;
+        const endRadius = Math.hypot(
+            Math.max(x, window.innerWidth - x),
+            Math.max(y, window.innerHeight - y)
+        );
+
+        const transition = document.startViewTransition(async () => {
+            setIsDark(!isDark);
+        });
+
+        transition.ready.then(() => {
+            const clipPath = [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${endRadius}px at ${x}px ${y}px)`,
+            ];
+            document.documentElement.animate(
+                {
+                    clipPath: isDark ? [...clipPath].reverse() : clipPath,
+                },
+                {
+                    duration: 500,
+                    easing: 'ease-in-out',
+                    pseudoElement: isDark ? '::view-transition-old(root)' : '::view-transition-new(root)',
+                }
+            );
+        });
+    };
+
     const handleLogout = () => {
         logout();
     };
@@ -78,24 +116,47 @@ export default function AppHeader() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsDark(!isDark)}
-                        className="rounded-full w-10 h-10 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors border-0"
+                        onClick={toggleTheme}
+                        className="relative rounded-full w-12 h-12 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all border-0 overflow-hidden group shadow-inner"
                     >
-                        <AnimatePresence mode="wait" initial={false}>
-                            <motion.div
-                                key={isDark ? "moon" : "sun"}
-                                initial={{ y: -10, opacity: 0, rotate: -45 }}
-                                animate={{ y: 0, opacity: 1, rotate: 0 }}
-                                exit={{ y: 10, opacity: 0, rotate: 45 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {isDark ? (
-                                    <Moon className="h-5 w-5 text-indigo-400" />
-                                ) : (
-                                    <Sun className="h-5 w-5 text-amber-500" />
-                                )}
-                            </motion.div>
-                        </AnimatePresence>
+                        <motion.div
+                            animate={{ 
+                                rotate: isDark ? 180 : 0,
+                                scale: isDark ? 1.1 : 1
+                            }}
+                            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                            className="relative w-full h-full flex items-center justify-center"
+                        >
+                             <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={isDark ? "moon" : "sun"}
+                                    initial={{ y: -20, opacity: 0, rotate: -90 }}
+                                    animate={{ y: 0, opacity: 1, rotate: 0 }}
+                                    exit={{ y: 20, opacity: 0, rotate: 90 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    {isDark ? (
+                                        <div className="relative">
+                                             <Moon className="h-6 w-6 text-indigo-400 fill-indigo-400/20" />
+                                             <motion.div 
+                                                animate={{ opacity: [0, 1, 0] }}
+                                                transition={{ repeat: Infinity, duration: 2, times: [0, 0.5, 1] }}
+                                                className="absolute -top-1 -right-1 w-1 h-1 bg-white rounded-full shadow-[0_0_5px_white]"
+                                             />
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <Sun className="h-6 w-6 text-amber-500 fill-amber-500/20" />
+                                            <motion.div 
+                                                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                                                transition={{ repeat: Infinity, duration: 3 }}
+                                                className="absolute inset-0 bg-amber-400/20 rounded-full blur-md"
+                                            />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+                        </motion.div>
                     </Button>
 
                     {/* User Info */}
@@ -113,13 +174,20 @@ export default function AppHeader() {
                                 variant="ghost"
                                 className="relative h-10 w-10 rounded-full"
                             >
-                                <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm transition-transform hover:scale-105">
-                                    <AvatarImage
-                                        src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
-                                        alt="User"
-                                    />
-                                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                        {user?.name?.[0] || "U"}
+                                <Avatar className="h-10 w-10 border-2 border-slate-100 dark:border-slate-700 shadow-sm transition-transform hover:scale-105">
+                                    <AvatarFallback className={`font-black text-sm tracking-tight ${
+                                        user?.role === 'admin'
+                                            ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
+                                            : user?.role === 'teacher'
+                                            ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400'
+                                            : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
+                                    }`}>
+                                        {(() => {
+                                            const parts = (user?.name || 'U').trim().split(' ');
+                                            const first = parts[0]?.[0] || '';
+                                            const last = parts.length > 1 ? parts[parts.length - 1]?.[0] || '' : '';
+                                            return (first + last).toUpperCase() || 'U';
+                                        })()}
                                     </AvatarFallback>
                                 </Avatar>
                             </Button>

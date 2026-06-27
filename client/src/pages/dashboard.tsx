@@ -138,7 +138,7 @@ function AdminAnalyticsDashboard({ exams, user, setLocation }: any) {
           totalTeachers: new Set(exams.map((e: any) => e.createdBy?._id)).size || 12,
           totalStudents: 156,
           totalExams: exams.length || 48,
-          totalQuestions: exams.reduce((acc: number, e: any) => acc + (e.questionsCount || 0), 0) || 1240
+          totalQuestions: exams.reduce((acc: number, e: any) => acc + (e.numberOfQuestions || e.questionsCount || e.questions?.length || 0), 0) || 1240
         });
       } finally {
         setLoading(false);
@@ -163,7 +163,7 @@ function AdminAnalyticsDashboard({ exams, user, setLocation }: any) {
     const date = new Date(exam.createdAt || Date.now());
     const month = monthNames[date.getMonth()];
     const year = date.getFullYear();
-    const qCount = exam.questionsCount || exam.questions?.length || 0;
+    const qCount = exam.numberOfQuestions || exam.questionsCount || exam.questions?.length || 0;
     const existing = acc.find(item => item.name === month && item.year === year);
     if (existing) {
       existing.questions += qCount;
@@ -292,12 +292,12 @@ function StudentAnalyticsDashboard({ exams, user, setLocation }: any) {
     // Use exam.score to match the exact Points (PTS) logic used by the Leaderboard
     const points = exam.score || 0;
     
-    const existing = acc.find(item => item.name === month && item.year === year);
+    const existing = acc.find((item: any) => item.name === month && item.year === year);
     if (existing) {
       existing.points += points;
     }
     return acc;
-  }, last12MonthsData).map(item => ({
+  }, last12MonthsData).map((item: any) => ({
     name: item.name,
     points: item.points
   }));
@@ -548,23 +548,31 @@ function TeacherAnalyticsDashboard({ exams, user, setLocation }: any) {
                   </Pie>
                   <RechartsTooltip 
                     contentStyle={{ 
-                      borderRadius: '20px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                      borderRadius: '24px', 
+                      border: '1px solid', 
+                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)', 
+                      padding: '12px 16px', 
                       fontWeight: 'bold',
-                      backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#fff',
-                      color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a'
+                      backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : 'rgba(255, 255, 255, 0.95)',
+                      borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#f1f5f9',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                    itemStyle={{
+                      color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      textTransform: 'capitalize'
                     }}
                   />
                   <Legend 
                     verticalAlign="bottom" 
                     height={36} 
                     content={({ payload }) => (
-                      <div className="flex justify-center gap-4 mt-4">
+                      <div className="flex justify-center gap-6 mt-6">
                         {payload?.map((entry: any, index: number) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">{entry.value}</span>
+                          <div key={index} className="flex items-center gap-2 group cursor-default">
+                            <div className="w-3 h-3 rounded-full transition-transform group-hover:scale-125" style={{ backgroundColor: entry.color }} />
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{entry.value}</span>
                           </div>
                         ))}
                       </div>
@@ -774,6 +782,37 @@ export default function Dashboard() {
   );
 
   const [viewingResult, setViewingResult] = useState<any>(null);
+  const [selectedAttempt, setSelectedAttempt] = useState<any>(null);
+
+  useEffect(() => {
+    if (viewingResult) {
+      if (viewingResult.attempts && viewingResult.attempts.length > 0) {
+        // Find the overall highest scoring (best) attempt
+        const best = viewingResult.attempts.reduce((bestAcc: any, curr: any) => {
+          if (!bestAcc) return curr;
+          if (curr.score > bestAcc.score) return curr;
+          if (curr.score < bestAcc.score) return bestAcc;
+          
+          // Equal scores: tie-breaker by timeTaken (lesser is better)
+          const currTime = curr.timeTaken ?? 999999;
+          const bestTime = bestAcc.timeTaken ?? 999999;
+          if (currTime < bestTime) return curr;
+          if (currTime > bestTime) return bestAcc;
+          
+          // Equal scores and equal timeTaken: tie-breaker by date (older is better)
+          const currDate = new Date(curr.completedAt || curr.createdAt).getTime();
+          const bestDate = new Date(bestAcc.completedAt || bestAcc.createdAt).getTime();
+          return currDate < bestDate ? curr : bestAcc;
+        }, null);
+        setSelectedAttempt(best);
+      } else {
+        setSelectedAttempt(viewingResult);
+      }
+    } else {
+      setSelectedAttempt(null);
+    }
+  }, [viewingResult]);
+
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -931,7 +970,7 @@ export default function Dashboard() {
     const answers = questions.map((q: any, idx: number) => ({
       questionId: q.questionId || q._id,
       selectedOption: studentAnswers[idx]
-    })).filter(a => a.selectedOption !== undefined);
+    })).filter((a: any) => a.selectedOption !== undefined);
 
     questions.forEach((q: any, idx: number) => {
       const studentAns = studentAnswers[idx];
@@ -975,54 +1014,75 @@ export default function Dashboard() {
         });
         const data = await res.json();
 
+        if (!data.success) {
+          toast.error(data.message || "Failed to submit exam to server");
+          return;
+        }
+
         // Check for improvement
-        const previousExamData = exams.find(e => e._id === takingExam._id);
+        const previousExamData = exams.find(e => e._id === takingExam._id) as any;
         const previousPercentage = previousExamData?.percentage || 0;
         const isBetterThanLast = ((correctCount / questions.length) * 100) > previousPercentage;
 
-        if (!data.success) {
-          toast.error(data.message || "Failed to submit exam to server");
-        } else {
-          // Update local state to reflect completion
-          setExams(prev => prev.map(e =>
-            e._id === takingExam._id ? {
-              ...e,
-              isCompleted: true,
-              score: correctCount,
-              totalMarks: questions.length,
-              percentage: (correctCount / questions.length) * 100,
-              timeTaken: timeTakenSeconds,
-              avgTimePerQuestion: avgTimePerQuestion,
-              totalQuestions,
-              attemptedCount,
-              correctCount,
-              wrongCount
-            } : e
-          ));
-        }
+        // Update local state to reflect completion
+        setExams(prev => prev.map(e =>
+          e._id === takingExam._id ? {
+            ...e,
+            isCompleted: true,
+            score: correctCount,
+            totalMarks: questions.length,
+            percentage: (correctCount / questions.length) * 100,
+            timeTaken: timeTakenSeconds,
+            avgTimePerQuestion: avgTimePerQuestion,
+            totalQuestions,
+            attemptedCount,
+            correctCount,
+            wrongCount
+          } : e
+        ));
+        await fetchExams();
+
+        setExamResult({
+          total: questions.length,
+          score: correctCount,
+          percentage: (correctCount / questions.length) * 100,
+          timeTaken: timeTakenSeconds,
+          avgTime: avgTimePerQuestion,
+          isBetterThanLast: isBetterThanLast,
+          isPerQuestion: takingExam.timeLimitType === "per-question",
+          stats: {
+            totalQuestions,
+            attemptedCount,
+            notAttemptedCount,
+            correctCount,
+            wrongCount
+          }
+        });
+        toast.success(`Exam submitted! Score: ${correctCount}/${questions.length}`);
       } catch (error) {
         console.error("Submission failed:", error);
         toast.error("Network error submitting exam. Please try again.");
       }
+    } else {
+      // Preview mode for non-students
+      setExamResult({
+        total: questions.length,
+        score: correctCount,
+        percentage: (correctCount / questions.length) * 100,
+        timeTaken: timeTakenSeconds,
+        avgTime: avgTimePerQuestion,
+        isBetterThanLast: false,
+        isPerQuestion: takingExam.timeLimitType === "per-question",
+        stats: {
+          totalQuestions,
+          attemptedCount,
+          notAttemptedCount,
+          correctCount,
+          wrongCount
+        }
+      });
+      toast.success(`Exam preview finished! Score: ${correctCount}/${questions.length}`);
     }
-
-    setExamResult({
-      total: questions.length,
-      score: correctCount,
-      percentage: (correctCount / questions.length) * 100,
-      timeTaken: timeTakenSeconds,
-      avgTime: avgTimePerQuestion,
-      isBetterThanLast: (user?.role === "student") ? (((correctCount / questions.length) * 100) > (exams.find(e => e._id === takingExam._id)?.percentage || 0)) : false,
-      isPerQuestion: takingExam.timeLimitType === "per-question",
-      stats: {
-        totalQuestions,
-        attemptedCount,
-        notAttemptedCount,
-        correctCount,
-        wrongCount
-      }
-    });
-    toast.success(`Exam submitted! Score: ${correctCount}/${questions.length}`);
   };
 
   const handleDownloadPDF = async (e: React.MouseEvent, exam: Exam) => {
@@ -1067,15 +1127,18 @@ export default function Dashboard() {
         (exam as any)?.timeLimitType ??
         null;
 
+      const isPublished = exam.status?.toUpperCase() === "PUBLISHED";
+      let fetchedQuestions = questionsData?.success && questionsData?.data ? questionsData.data : [];
+      if (isPublished) {
+        fetchedQuestions = fetchedQuestions.filter((q: any) => q.isLocked || q.isApproved);
+      }
+
       const examForPDF: any = {
         ...exam,
         ...fullExam,
         timeLimit: resolvedTimeLimit,
         timeLimitType: resolvedTimeLimitType,
-        questions:
-          questionsData?.success && questionsData?.data
-            ? questionsData.data
-            : [],
+        questions: fetchedQuestions,
       };
 
       toast.success("PDF generated!", { id: "pdf-toast" });
@@ -1246,7 +1309,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Avg Score</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{Math.round(exams.filter(e => e.isCompleted).reduce((acc, e) => acc + (e.percentage || 0), 0) / (exams.filter(e => e.isCompleted).length || 1))}%</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{Math.round(exams.filter((e: any) => e.isCompleted).reduce((acc, e: any) => acc + (e.percentage || 0), 0) / (exams.filter((e: any) => e.isCompleted).length || 1))}%</h2>
                     </motion.div>
                     <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
@@ -1255,7 +1318,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Completed</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter(e => e.isCompleted).length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter((e: any) => e.isCompleted).length}</h2>
                     </motion.div>
                     <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800 relative overflow-hidden group">
                       <div className="flex items-center gap-4 mb-4">
@@ -1264,7 +1327,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">Pending</p>
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter(e => !e.isCompleted).length}</h2>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">{exams.filter((e: any) => !e.isCompleted).length}</h2>
                     </motion.div>
                   </>
                 ) : (
@@ -1443,7 +1506,7 @@ export default function Dashboard() {
                           <div>
                             <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Filtering by Teacher</p>
                             <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                              {exams.find(e => ((e as any).createdBy?._id || (e as any).createdBy) === activeTeacherFilter)?.createdBy?.firstName || "Selected Instructor"}'s Exams
+                              {(exams.find(e => ((e as any).createdBy?._id || (e as any).createdBy) === activeTeacherFilter) as any)?.createdBy?.firstName || "Selected Instructor"}'s Exams
                             </p>
                           </div>
                         </div>
@@ -1578,10 +1641,13 @@ export default function Dashboard() {
                                 }));
                               }
                               toast.dismiss("exam-load");
+                              const isPublished = exam.status?.toUpperCase() === "PUBLISHED";
+                              const filteredQuestions = isPublished ? questions.filter((q: any) => q.isLocked) : questions;
+                              
                               setPreviewExam({
                                 ...exam,
-                                questions,
-                                questionsCount: questions.length,
+                                questions: filteredQuestions,
+                                questionsCount: filteredQuestions.length,
                               });
                             } catch (error) {
                               toast.dismiss("exam-load");
@@ -1620,10 +1686,19 @@ export default function Dashboard() {
                             toast.dismiss("exam-load");
 
                             const isDraftStatus = ["Draft", "DRAFT", "CREATED"].includes(exam.status);
+                            const isPublished = exam.status?.toUpperCase() === "PUBLISHED";
 
                             if (isDraftStatus) {
                               sessionStorage.setItem("isEditingExam", "true");
                               setLocation("/create-exam");
+                            } else if (isPublished) {
+                              // Instead of edit view, show PDF preview of locked questions
+                              const lockedQuestions = questions.filter((q: any) => q.isLocked);
+                              setPreviewExam({
+                                ...exam,
+                                questions: lockedQuestions,
+                                questionsCount: lockedQuestions.length
+                              });
                             } else {
                               setLocation(`/exams/${exam._id}/questions`);
                             }
@@ -1634,9 +1709,9 @@ export default function Dashboard() {
                         }}
                       >
                         {/* Status Indicator Bar */}
-                        <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-500 group-hover:h-2 ${exam.difficulty?.toUpperCase() === 'HARD' ? 'bg-rose-500' :
-                          exam.difficulty?.toUpperCase() === 'MEDIUM' ? 'bg-blue-500' :
-                            exam.difficulty?.toUpperCase() === 'EASY' ? 'bg-emerald-500' :
+                        <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-500 group-hover:h-2 ${(exam as any).difficulty?.toUpperCase() === 'HARD' ? 'bg-rose-500' :
+                          (exam as any).difficulty?.toUpperCase() === 'MEDIUM' ? 'bg-blue-500' :
+                            (exam as any).difficulty?.toUpperCase() === 'EASY' ? 'bg-emerald-500' :
                               'bg-primary'
                           }`} />
 
@@ -1661,7 +1736,7 @@ export default function Dashboard() {
                               >
                                 {user?.role === "student"
                                   ? ((exam as any).isCompleted
-                                    ? `Completed • ${Math.round((exam as any).percentage || 0)}%`
+                                    ? `Completed • ${Math.round((exam as any).percentage || 0)}% (${(exam as any).attemptsCount || 1} Attempt${((exam as any).attemptsCount || 1) > 1 ? 's' : ''})`
                                     : 'Not Completed')
                                   : (exam.status || 'Draft')}
                               </Badge>
@@ -1693,20 +1768,34 @@ export default function Dashboard() {
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
-                                {user?.role === "student" && (exam as any).isCompleted && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setViewingResult(exam);
-                                    }}
-                                    title="View Results"
-                                  >
-                                    <BarChart3 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                {(user?.role === "student" || user?.role === "admin") && (exam as any).isCompleted && (
+                                   <>
+                                     <Button
+                                       variant="ghost"
+                                       size="icon"
+                                       className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         handleViewExamLeaderboard(e, exam);
+                                       }}
+                                       title="View Leaderboard"
+                                     >
+                                       <Trophy className="h-4 w-4" />
+                                     </Button>
+                                     <Button
+                                       variant="ghost"
+                                       size="icon"
+                                       className="h-9 w-9 rounded-full bg-slate-50 dark:bg-slate-800/80 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-90 opacity-0 group-hover:opacity-100 shadow-sm"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         setViewingResult(exam);
+                                       }}
+                                       title="View Results"
+                                     >
+                                       <BarChart3 className="h-4 w-4" />
+                                     </Button>
+                                   </>
+                                 )}
                               </div>
                             ) : (
                               <DropdownMenu>
@@ -1901,7 +1990,8 @@ export default function Dashboard() {
                                 const subjects = (exam as any).subjects;
                                 const tags = Array.isArray(topics) ? topics : (typeof topics === 'string' ? topics.split(',').map(t => t.trim()).filter(Boolean) : []);
                                 const subjectTags = Array.isArray(subjects) ? subjects : (typeof subjects === 'string' ? subjects.split(',').map(s => s.trim()).filter(Boolean) : []);
-                                const allTags = [...new Set([...tags, ...subjectTags])];
+                                const combinedTags = [...tags, ...subjectTags];
+                                const allTags = combinedTags.filter((tag, index) => combinedTags.indexOf(tag) === index);
                                 
                                 if (allTags.length === 0) return null;
 
@@ -2235,6 +2325,7 @@ export default function Dashboard() {
                           </p>
                           <p className="text-[10px] font-semibold text-slate-400">
                             {new Date(student.createdAt).toLocaleDateString()}
+                            {student.attemptNumber && ` • Attempt ${student.attemptNumber}`}
                           </p>
                         </div>
                       </div>
@@ -2762,6 +2853,7 @@ export default function Dashboard() {
                     onClick={() => {
                       setTakingExam(null);
                       setExamResult(null);
+                      fetchExams();
                     }}
                   >
                     Close & Return Home
@@ -2890,133 +2982,185 @@ export default function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
-      {/* Result Dialog (Student) */}
+
+      {/* Viewing Result Modal */}
       <Dialog open={!!viewingResult} onOpenChange={(open) => !open && setViewingResult(null)}>
-        <DialogContent className="max-w-xl p-0 overflow-hidden rounded-[2.5rem] border-0 shadow-2xl bg-white">
-          <div className="p-6 space-y-4">
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-4xl mb-1 relative">
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                >
-                  {viewingResult?.percentage >= 90 ? '🏆' :
-                    viewingResult?.percentage >= 80 ? '🥇' :
-                      viewingResult?.percentage >= 70 ? '🥈' :
-                        viewingResult?.percentage >= 60 ? '🥉' :
-                          viewingResult?.percentage >= 40 ? '👍' : '📚'}
-                </motion.span>
-              </div>
-              <h2 className="text-xl font-black text-slate-900">Exam Result</h2>
-              <div className="flex flex-col items-center gap-0.5">
-                <p className="text-slate-500 text-xs font-medium">Results for <span className="text-slate-900 font-bold">{viewingResult?.title}</span></p>
-                {viewingResult?.createdBy && (
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tighter">
-                    Teacher: <span className="text-slate-600 font-black">{viewingResult.createdBy.firstName} {viewingResult.createdBy.lastName}</span>
-                  </p>
+        <DialogContent className="max-w-[440px] p-0 overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-850 shadow-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+          {(() => {
+            const selectedPct = selectedAttempt ? Math.round((selectedAttempt.score / selectedAttempt.totalMarks) * 100) : 0;
+            return (
+              <div className="p-5 space-y-3.5">
+                <div className="text-center space-y-1">
+                  <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/20 text-xl mb-0 relative">
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                    >
+                      {selectedPct >= 90 ? '🏆' :
+                        selectedPct >= 80 ? '🥇' :
+                          selectedPct >= 70 ? '🥈' :
+                            selectedPct >= 60 ? '🥉' :
+                              selectedPct >= 40 ? '👍' : '📚'}
+                    </motion.span>
+                  </div>
+                  <h2 className="text-lg font-black text-slate-850 dark:text-slate-100 leading-tight">Exam Result</h2>
+                  <div className="flex flex-col items-center gap-0">
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold">Results for <span className="text-slate-850 dark:text-slate-200 font-bold">{viewingResult?.title}</span></p>
+                    {viewingResult?.createdBy && (
+                      <p className="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-tighter">
+                        Teacher: <span className="text-slate-700 dark:text-slate-300 font-black">{viewingResult.createdBy.firstName} {viewingResult.createdBy.lastName}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Attempts Selector */}
+                {viewingResult?.attempts && viewingResult.attempts.length > 1 && (
+                  <div className="flex flex-col gap-1 py-1.5 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800 p-2">
+                    <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Attempts History ({viewingResult.attempts.length})</p>
+                    <div 
+                      className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-1 w-full justify-start animate-fadeIn"
+                      onWheel={(e) => {
+                        if (e.deltaY !== 0) {
+                          e.currentTarget.scrollLeft += e.deltaY;
+                        }
+                      }}
+                    >
+                      {viewingResult.attempts.map((att: any, idx: number) => {
+                        const attNum = viewingResult.attempts.length - idx;
+                        const isSelected = selectedAttempt?._id === att._id;
+                        const attPct = Math.round((att.score / att.totalMarks) * 100);
+                        return (
+                          <button
+                            key={att._id || idx}
+                            onClick={() => setSelectedAttempt(att)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-300 active:scale-95 border cursor-pointer shrink-0 ${
+                              isSelected
+                                ? "bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105"
+                                : "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-slate-200 dark:border-slate-800"
+                            }`}
+                          >
+                            Attempt {attNum} ({attPct}%)
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 space-y-3">
-              <div className="flex justify-between items-center pb-3 border-b border-slate-200">
-                <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Score</p>
-                  <p className="text-xl font-black text-primary">{viewingResult?.score} <span className="text-slate-300 text-base">/</span> {viewingResult?.totalMarks}</p>
-                </div>
-                <div className="text-right space-y-0.5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Percentage</p>
-                  <p className={`text-xl font-black ${viewingResult?.percentage >= 40 ? 'text-emerald-500' : 'text-rose-500'}`}>{Math.round(viewingResult?.percentage || 0)}%</p>
-                </div>
-              </div>
-
-              {/* Detailed Stats Grid for Historical View */}
-              <div className="grid grid-cols-5 gap-2 py-2.5 border-b border-slate-200">
-                <div className="text-center p-2 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Total</p>
-                  <p className="text-lg font-black text-slate-700">{viewingResult?.totalQuestions || (viewingResult as any)?.questionsCount || (viewingResult as any)?.questions?.length || 0}</p>
-                </div>
-                <div className="text-center p-2 rounded-2xl bg-white border border-blue-100 shadow-sm">
-                  <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Attempted</p>
-                  <p className="text-lg font-black text-blue-700">{viewingResult?.attemptedCount || viewingResult?.score || 0}</p>
-                </div>
-                <div className="text-center p-2 rounded-2xl bg-white border border-emerald-100 shadow-sm">
-                  <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-tight">Correct</p>
-                  <p className="text-lg font-black text-emerald-700">{viewingResult?.correctCount || viewingResult?.score || 0}</p>
-                </div>
-                <div className="text-center p-2 rounded-2xl bg-white border border-rose-100 shadow-sm">
-                  <p className="text-[9px] font-bold text-rose-400 uppercase tracking-tight">Incorrect</p>
-                  <p className="text-lg font-black text-rose-700">{viewingResult?.wrongCount || 0}</p>
-                </div>
-                <div className="text-center p-2 rounded-2xl bg-white border border-amber-100 shadow-sm">
-                  <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Skipped</p>
-                  <p className="text-lg font-black text-amber-700">
-                    {viewingResult?.attemptedCount !== undefined
-                      ? (viewingResult?.totalQuestions || 0) - (viewingResult?.attemptedCount || 0)
-                      : (viewingResult?.totalQuestions || (viewingResult as any)?.questionsCount || 0) - (viewingResult?.score || 0)
-                    }
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                <div className="h-4 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-1000 ease-out rounded-full ${viewingResult?.percentage >= 40 ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                    style={{ width: `${viewingResult?.percentage || 0}%` }}
-                  />
-                </div>
-
-                {/* Time Statistics Row for Historical Result */}
-                <div className="grid grid-cols-2 gap-4 py-2.5 border-y border-slate-200">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time Taken</p>
-                    <div className="flex items-center gap-1.5 text-slate-700 font-bold">
-                      <Clock className="h-3 w-3 text-primary" />
-                      <span className="text-xs">{viewingResult?.timeTaken ? `${Math.floor(viewingResult.timeTaken / 60)}m ${Math.round(viewingResult.timeTaken % 60)}s` : 'N/A'}</span>
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/60 space-y-2">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-100/50 dark:border-slate-800">
+                    <div className="space-y-0">
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your Score</p>
+                      <p className="text-lg font-black text-primary">{selectedAttempt?.score} <span className="text-slate-300 dark:text-slate-700 text-xs">/</span> {selectedAttempt?.totalMarks}</p>
+                    </div>
+                    <div className="text-right space-y-0">
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Percentage</p>
+                      <p className={`text-lg font-black ${selectedPct >= 40 ? 'text-emerald-500' : 'text-rose-500'}`}>{selectedPct}%</p>
                     </div>
                   </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg. Time / Q</p>
-                    <div className="flex items-center justify-end gap-1.5 text-slate-700 font-bold">
-                      <Zap className="h-3 w-3 text-amber-500" />
-                      <span className="text-xs">{viewingResult?.avgTimePerQuestion ? `${Math.round(viewingResult.avgTimePerQuestion)}s` : 'N/A'}</span>
+
+                  {/* Detailed Stats Grid for Historical View */}
+                  <div className="grid grid-cols-5 gap-1 py-1 border-b border-slate-100/50 dark:border-slate-800">
+                    <div className="text-center p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <p className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">Total</p>
+                      <p className="text-base font-black text-slate-800 dark:text-slate-200">{selectedAttempt?.totalQuestions || 0}</p>
                     </div>
+                    <div className="text-center p-1.5 rounded-xl bg-blue-500/5 border border-blue-500/20 shadow-sm">
+                      <p className="text-[8px] font-bold text-blue-500 uppercase tracking-tight">Att.</p>
+                      <p className="text-base font-black text-blue-600 dark:text-blue-400">{selectedAttempt?.attemptedCount || 0}</p>
+                    </div>
+                    <div className="text-center p-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm">
+                      <p className="text-[8px] font-bold text-emerald-500 uppercase tracking-tight">Correct</p>
+                      <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{selectedAttempt?.correctCount || 0}</p>
+                    </div>
+                    <div className="text-center p-1.5 rounded-xl bg-rose-500/5 border border-rose-500/20 shadow-sm">
+                      <p className="text-[8px] font-bold text-rose-500 uppercase tracking-tight">Wrong</p>
+                      <p className="text-base font-black text-rose-600 dark:text-rose-400">{selectedAttempt?.wrongCount || 0}</p>
+                    </div>
+                    <div className="text-center p-1.5 rounded-xl bg-amber-500/5 border border-amber-500/20 shadow-sm">
+                      <p className="text-[8px] font-bold text-amber-500 uppercase tracking-tight">Skip</p>
+                      <p className="text-base font-black text-amber-600 dark:text-amber-400">
+                        {(selectedAttempt?.totalQuestions || 0) - (selectedAttempt?.attemptedCount || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/40 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-1000 ease-out rounded-full ${selectedPct >= 40 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                        style={{ width: `${selectedPct}%` }}
+                      />
+                    </div>
+
+                    {/* Time Statistics Row for Historical Result */}
+                    <div className="grid grid-cols-2 gap-2 py-1 border-y border-slate-100/50 dark:border-slate-800">
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Time Taken</p>
+                        <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-bold">
+                          <Clock className="h-2.5 w-2.5 text-primary" />
+                          <span className="text-[11px]">{selectedAttempt?.timeTaken ? `${Math.floor(selectedAttempt.timeTaken / 60)}m ${Math.round(selectedAttempt.timeTaken % 60)}s` : 'N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-0.5">
+                        <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Avg. Time / Q</p>
+                        <div className="flex items-center justify-end gap-1 text-slate-700 dark:text-slate-300 font-bold">
+                          <Zap className="h-2.5 w-2.5 text-amber-500 animate-pulse" />
+                          <span className="text-[11px]">{selectedAttempt?.avgTimePerQuestion ? `${Math.round(selectedAttempt.avgTimePerQuestion)}s` : 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-center text-xs font-bold text-slate-550 dark:text-slate-400 pt-0.5">
+                      {selectedPct >= 80 ? '🏆 Outstanding Performance!' :
+                        selectedPct >= 60 ? '👏 Great job!' :
+                          selectedPct >= 40 ? '👍 Good attempt' :
+                            'Keep practicing!'}
+                    </p>
                   </div>
                 </div>
 
-                <p className="text-center text-[13px] font-bold text-slate-500 pt-1">
-                  {viewingResult?.percentage >= 80 ? '🏆 Outstanding Performance!' :
-                    viewingResult?.percentage >= 60 ? '👏 Great job!' :
-                      viewingResult?.percentage >= 40 ? '👍 Good attempt' :
-                        'Keep practicing!'}
-                </p>
+                <div className="flex flex-col gap-1">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      variant="outline"
+                      className="h-9 rounded-lg font-bold text-xs border-amber-200 dark:border-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 bg-transparent transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer"
+                      onClick={(e) => {
+                        if (!viewingResult) return;
+                        const examForLeaderboard = { ...viewingResult };
+                        setViewingResult(null);
+                        handleViewExamLeaderboard(e, examForLeaderboard);
+                      }}
+                    >
+                      <Trophy className="h-3.5 w-3.5" />
+                      Leaderboard
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-9 rounded-lg font-bold text-xs border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-transparent transition-all duration-300 flex items-center justify-center gap-1"
+                      onClick={() => {
+                        if (!viewingResult) return;
+                        const examToStart = { ...viewingResult };
+                        setViewingResult(null);
+                        handleStartExam(examToStart);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Retake Exam
+                    </Button>
+                  </div>
+                  <Button
+                    className="w-full h-9 rounded-lg font-bold text-xs shadow-sm cursor-pointer transition-all duration-300 hover:scale-[1.01]"
+                    onClick={() => setViewingResult(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-11 rounded-xl font-bold text-base border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
-                onClick={() => {
-                  if (!viewingResult) return;
-                  const examToStart = { ...viewingResult };
-                  setViewingResult(null);
-                  handleStartExam(examToStart);
-                }}
-              >
-                <Plus className="h-5 w-5" />
-                Retake Exam
-              </Button>
-              <Button
-                className="w-full h-11 rounded-xl font-bold text-base shadow-lg shadow-primary/20"
-                onClick={() => setViewingResult(null)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
       </div>
