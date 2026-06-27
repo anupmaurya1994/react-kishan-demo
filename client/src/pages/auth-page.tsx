@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -822,9 +822,9 @@ export default function AuthPage() {
 
                   <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-inter">
                     By clicking continue, you agree to our{" "}
-                    <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Terms of Service</a>{" "}
+                    <Link href="/terms" className="underline underline-offset-4 hover:text-primary transition-colors">Terms of Service</Link>{" "}
                     and{" "}
-                    <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Privacy Policy</a>.
+                    <Link href="/privacy" className="underline underline-offset-4 hover:text-primary transition-colors">Privacy Policy</Link>.
                     <div className="mt-4 flex justify-between text-sm">
                       <button type="button" onClick={() => setActiveView("teacher-signup")} className="text-primary hover:underline">Register as Teacher</button>
                       <button type="button" onClick={() => setActiveView("admin-login")} className="text-slate-500 dark:text-slate-400 hover:underline">Admin Login</button>

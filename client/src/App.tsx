@@ -17,6 +17,8 @@ import LeaderboardPage from "./pages/leaderboard";
 import ProfilePage from "./pages/profile";
 import AdminStudents from "./pages/admin-students";
 import AdminTeachers from "./pages/admin-teachers";
+import TermsAndConditions from "./pages/terms";
+import PrivacyPolicy from "./pages/privacy";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -88,6 +90,9 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/admin/students" component={AdminStudents} />
       <ProtectedRoute path="/admin/teachers" component={AdminTeachers} />
+
+      <Route path="/terms" component={TermsAndConditions} />
+      <Route path="/privacy" component={PrivacyPolicy} />
 
       <Route component={NotFound} />
     </Switch>
