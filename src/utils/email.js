@@ -3,20 +3,27 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports (587 uses STARTTLS)
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false // Helps with some SMTP relay issues
-  }
-});
-
 export const sendOTP = async (email, otp, role = 'student') => {
+  const isGmail = process.env.SMTP_HOST === 'smtp.gmail.com';
+  
+  const transporter = nodemailer.createTransport(
+    isGmail ? {
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      }
+    } : {
+      host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: { rejectUnauthorized: false }
+    }
+  );
   const roleName = role.charAt(0).toUpperCase() + role.slice(1);
   const mailOptions = {
     from: `"ExamAI" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
