@@ -45,11 +45,11 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5002',
+        target: 'https://react-kishan-demo.onrender.com',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:5002',
+        target: 'https://react-kishan-demo.onrender.com',
         changeOrigin: true,
       },
     },

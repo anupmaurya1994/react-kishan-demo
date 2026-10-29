@@ -104,7 +104,7 @@ export default function QuestionsListPage() {
     queryFn: async () => {
       if (serverSyncFailed) return null;
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/exams/${id}/questions?page=${currentPage}&limit=${pageSize}`, {
+      const res = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${id}/questions?page=${currentPage}&limit=${pageSize}`, {
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
         },
@@ -132,7 +132,7 @@ export default function QuestionsListPage() {
     queryFn: async () => {
       if (id === "demo-id" || serverSyncFailed) return null;
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/exams/${id}`, {
+      const res = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${id}`, {
         headers: { ...(token && { Authorization: `Bearer ${token}` }) },
       });
       if (!res.ok) return null;
@@ -178,7 +178,7 @@ export default function QuestionsListPage() {
     queryKey: [`/api/exams/${id}/status`],
     queryFn: async () => {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/exams/${id}/status`, {
+      const res = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${id}/status`, {
         headers: { ...(token && { Authorization: `Bearer ${token}` }) },
       });
       if (!res.ok) return null;
@@ -206,7 +206,7 @@ export default function QuestionsListPage() {
   const publishMutation = useMutation({
     mutationFn: async () => {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/exams/${id}/publish`, {
+      const res = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${id}/publish`, {
         method: "POST",
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
@@ -257,7 +257,7 @@ export default function QuestionsListPage() {
   const regenerateMutation = useMutation({
     mutationFn: async () => {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/exams/${id}/regenerate`, {
+      const res = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${id}/regenerate`, {
         method: "POST",
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),

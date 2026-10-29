@@ -219,7 +219,7 @@ export default function CreateExam() {
       });
 
       const token = localStorage.getItem("token");
-      const saveUrl = examId ? `/api/exams/${examId}` : "/api/exams/create";
+      const saveUrl = "https://react-kishan-demo.onrender.com" + (examId ? `/api/exams/${examId}` : "/api/exams/create");
       const saveMethod = examId ? "PUT" : "POST";
 
       const saveRes = await fetch(saveUrl, {
@@ -238,7 +238,7 @@ export default function CreateExam() {
       examId = apiSaveData.data?._id || examId;
 
       // 2. Trigger AI Generation (Regenerate to clear old ones)
-      const genRes = await fetch(`/api/exams/${examId}/regenerate`, {
+      const genRes = await fetch(`https://react-kishan-demo.onrender.com/api/exams/${examId}/regenerate`, {
         method: "POST",
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
@@ -313,7 +313,7 @@ export default function CreateExam() {
       });
 
       const token = localStorage.getItem("token");
-      const url = examId ? `/api/exams/${examId}` : "/api/exams/create";
+      const url = "https://react-kishan-demo.onrender.com" + (examId ? `/api/exams/${examId}` : "/api/exams/create");
       const method = examId ? "PUT" : "POST";
 
       const res = await fetch(url, {

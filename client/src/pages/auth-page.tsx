@@ -160,7 +160,7 @@ export default function AuthPage() {
   //   setIsLoading(true);
 
   //   try {
-  //     const response = await fetch("http://192.168.1.13:5000/api/auth/login", {
+  //     const response = await fetch("https://react-kishan-demo.onrender.com/api/auth/login", {
   //       method: "POST",
   //       headers: { "Content-Type": "application/json" },
   //       body: JSON.stringify({ email, password }),
@@ -218,7 +218,7 @@ export default function AuthPage() {
 
   //   setIsLoading(true);
   //   try {
-  //     const res = await fetch("http://192.168.1.13:5000/api/auth/register", {
+  //     const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/register", {
   //       method: "POST",
   //       headers: { "Content-Type": "application/json" },
   //       body: JSON.stringify({ firstName, lastName, institution, email, password }),
@@ -270,7 +270,7 @@ export default function AuthPage() {
 
   //   setIsLoading(true);
   //   try {
-  //     const res = await fetch("http://192.168.1.13:5000/api/auth/register", {
+  //     const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/register", {
   //       method: "POST",
   //       headers: { "Content-Type": "application/json" },
   //       body: JSON.stringify({ firstName, lastName, institution, email, password }),
@@ -307,7 +307,7 @@ export default function AuthPage() {
     setFpError("");
     setFpLoading(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail }),
@@ -337,7 +337,7 @@ export default function AuthPage() {
     setFpError("");
     setFpLoading(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail, otp: fpOtp, newPassword: fpNewPassword, confirmPassword: fpConfirmPassword }),
@@ -371,7 +371,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
@@ -443,7 +443,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -496,7 +496,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/student/send-otp", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/student/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: studentFields.email }),
@@ -533,7 +533,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/student/verify-otp", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/student/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, firstName, lastName, password }),
@@ -567,7 +567,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/teacher/send-otp", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/teacher/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: teacherFields.email }),
@@ -604,7 +604,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/teacher/verify-otp", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/teacher/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, firstName, lastName, password }),
@@ -648,7 +648,7 @@ export default function AuthPage() {
       const selectedCollege = availableColleges.find(c => c.name === college);
       const university = selectedCollege?.university || "";
 
-      const res = await fetch("/api/auth/teacher/complete-profile", {
+      const res = await fetch("https://react-kishan-demo.onrender.com/api/auth/teacher/complete-profile", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",

@@ -14,8 +14,10 @@ export async function apiRequest(
 ): Promise<Response> {
 
   const token = localStorage.getItem("token");
+  const baseUrl = "https://react-kishan-demo.onrender.com";
+  const fullUrl = url.startsWith("/") ? baseUrl + url : url;
 
-  const res = await fetch(url, {
+  const res = await fetch(fullUrl, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -36,8 +38,11 @@ export const getQueryFn: <T>(options: {
     async ({ queryKey }) => {
 
       const token = localStorage.getItem("token");
+      const baseUrl = "https://react-kishan-demo.onrender.com";
+      const qKeyStr = queryKey.join("/") as string;
+      const fullUrl = qKeyStr.startsWith("/") ? baseUrl + qKeyStr : qKeyStr;
 
-      const res = await fetch(queryKey.join("/") as string, {
+      const res = await fetch(fullUrl, {
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
         },
