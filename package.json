@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "build": "node -c src/server.js"
+    "dev": "node init && nodemon src/server.js",
+    "start": "node init && node src/server.js",
+    "build": "node init && node -c src/server.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
